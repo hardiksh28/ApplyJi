@@ -1,0 +1,6 @@
+{
+  "name": "ApplyJi",
+  "description": "Smart job application tracker with Gmail sync, Gemini-powered insights, and automated activity logging.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI Insights", "Gmail Sync", "Job Tracking"]
+}
