@@ -67,13 +67,47 @@ export function Dashboard() {
         }
       });
       const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Sync failed');
+      
       console.log('Sync result:', result);
       fetchDashboardData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sync failed:', error);
+      alert('Sync failed: ' + (error.message || 'Unknown error'));
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleAddApplication = () => {
+    // For now, prompt the user for minimal info, or we could build a full modal.
+    // Given the request to "make all buttons work", I'll implement a simple prompt-based addition.
+    const company = prompt('Enter Company Name:');
+    if (!company) return;
+    const title = prompt('Enter Job Title:');
+    if (!title) return;
+
+    const addApp = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not found');
+
+        const { error } = await supabase.from('applications').insert({
+          user_id: user.id,
+          company_name: company,
+          job_title: title,
+          applied_at: new Date().toISOString(),
+          status: 'applied'
+        });
+
+        if (error) throw error;
+        fetchDashboardData();
+      } catch (err: any) {
+        console.error('Add app failed:', err);
+        alert('Failed to add application: ' + (err.message || 'Unknown error'));
+      }
+    };
+    addApp();
   };
 
   return (
@@ -93,7 +127,10 @@ export function Dashboard() {
               <RefreshCcw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? 'Syncing...' : 'Sync Gmail'}
             </button>
-            <button className="px-4 py-2 bg-indigo-600 rounded-xl text-sm font-semibold text-white hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200">
+            <button 
+              onClick={handleAddApplication}
+              className="px-4 py-2 bg-indigo-600 rounded-xl text-sm font-semibold text-white hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+            >
               <Plus className="w-4 h-4" />
               Add Application
             </button>

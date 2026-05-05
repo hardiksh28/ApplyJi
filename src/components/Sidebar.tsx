@@ -48,7 +48,14 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-gray-100">
         <button
-          onClick={() => signOut()}
+          onClick={async () => {
+            try {
+              await signOut();
+            } catch (err: any) {
+              console.error('Logout failed:', err);
+              alert('Logout failed: ' + (err.message || 'Unknown error'));
+            }
+          }}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-700 transition-colors w-full"
         >
           <LogOut className="w-5 h-5" />

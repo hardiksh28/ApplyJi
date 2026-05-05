@@ -15,18 +15,69 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle } from '../lib/auth-service';
+import { supabase } from '../lib/supabase/client';
 
 export function Landing() {
   const navigate = useNavigate();
   const [billingInterval, setBillingInterval] = React.useState<'month' | 'year'>('month');
+  const [user, setUser] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
 
-  const handleStart = async () => {
+  React.useEffect(() => {
+    // Initial fetch
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleStart = async (targetPlan?: 'pro' | 'basic') => {
+    if (user) {
+      if (targetPlan === 'pro') {
+        navigate('/billing');
+      } else {
+        navigate('/dashboard');
+      }
+      return;
+    }
+
     try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error(err);
+      if (targetPlan === 'pro') {
+        localStorage.setItem('redirect_after_auth', '/billing');
+      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      alert('Sign in failed: ' + (err.message || 'Unknown error'));
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#000000] text-white selection:bg-indigo-500/30 overflow-x-hidden font-sans">
@@ -58,16 +109,16 @@ export function Landing() {
 
           <div className="flex items-center gap-4">
             <button 
-              onClick={handleStart}
+              onClick={() => handleStart()}
               className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors"
             >
-              Sign In
+              {user ? 'Dashboard' : 'Sign In'}
             </button>
             <button 
-              onClick={handleStart}
+              onClick={() => handleStart()}
               className="px-4 py-1.5 bg-white text-black text-[13px] font-bold rounded-full hover:bg-gray-200 transition-all shadow-lg"
             >
-              Get Started
+              {user ? 'Go to App' : 'Get Started'}
             </button>
           </div>
         </div>
@@ -101,20 +152,15 @@ export function Landing() {
             </p>
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4"
-          >
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
             <button 
-              onClick={handleStart}
+              onClick={() => handleStart()}
               className="group px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full font-bold transition-all shadow-2xl shadow-indigo-500/20 flex items-center gap-3 text-lg"
             >
-              Start for free
+              {user ? 'Go to Dashboard' : 'Start for free'}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-          </motion.div>
+          </div>
         </div>
 
         {/* Cinematic Dashboard Preview */}
@@ -251,7 +297,7 @@ export function Landing() {
                 <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> 5 application slots</li>
               </ul>
               <button 
-                onClick={handleStart}
+                onClick={() => handleStart('basic')}
                 className="w-full py-4 bg-white/10 rounded-2xl font-bold hover:bg-white/20 transition-all"
               >
                 Get Started
@@ -280,7 +326,7 @@ export function Landing() {
                 <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-indigo-600" /> Priority Support</li>
               </ul>
               <button 
-                onClick={handleStart}
+                onClick={() => handleStart('pro')}
                 className="w-full py-4 bg-black text-white rounded-2xl font-bold hover:opacity-90 transition-all"
               >
                 Go Pro Now
@@ -321,9 +367,12 @@ export function Landing() {
                 ))}
               </div>
 
-              <button className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-full font-bold border border-white/10 transition-all">
+              <a 
+                href="mailto:sales@applyji.com?subject=Enterprise Inquiry"
+                className="inline-block px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-full font-bold border border-white/10 transition-all text-center"
+              >
                 Contact Sales
-              </button>
+              </a>
             </div>
 
             <div className="relative">

@@ -11,7 +11,11 @@ export function AuthCallback() {
       try {
         // Sync the refresh token to the profile
         await syncRefreshToken();
-        navigate('/dashboard', { replace: true });
+        
+        const redirectPath = localStorage.getItem('redirect_after_auth') || '/dashboard';
+        localStorage.removeItem('redirect_after_auth');
+        
+        navigate(redirectPath, { replace: true });
       } catch (err: any) {
         console.error('Auth callback error:', err);
         setError('Failed to sync authentication. Please try again.');

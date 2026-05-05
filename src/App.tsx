@@ -20,24 +20,36 @@ const Layout = ({ children }: { children: React.ReactNode }) => (
 
 const Billing = () => {
   const [loading, setLoading] = React.useState(false);
-  const [interval, setInterval] = React.useState<'month' | 'year'>('month');
+  const [billingInterval, setBillingInterval] = React.useState<'month' | 'year'>('month');
 
   const handleUpgrade = async () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('You must be signed in to upgrade');
+      }
+
       const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ interval })
+        body: JSON.stringify({ interval: billingInterval })
       });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch (err) {
+      
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to initiate checkout');
+      
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (err: any) {
       console.error('Checkout failed:', err);
+      alert('Checkout error: ' + err.message);
       setLoading(false);
     }
   };
@@ -54,14 +66,14 @@ const Billing = () => {
       <div className="mt-12 flex flex-col items-center gap-6">
         <div className="inline-flex items-center gap-4 bg-gray-100 p-1.5 rounded-2xl">
           <button 
-            onClick={() => setInterval('month')}
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${interval === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            onClick={() => setBillingInterval('month')}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${billingInterval === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
           >
             Monthly
           </button>
           <button 
-            onClick={() => setInterval('year')}
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${interval === 'year' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            onClick={() => setBillingInterval('year')}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${billingInterval === 'year' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
           >
             Yearly
             <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">-15%</span>
@@ -74,11 +86,14 @@ const Billing = () => {
             disabled={loading}
             className="w-full sm:w-auto bg-indigo-600 text-white px-10 py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50"
           >
-            {loading ? 'Redirecting...' : `Upgrade for ${interval === 'month' ? '$9/mo' : '$91.80/yr'}`}
+            {loading ? 'Redirecting...' : `Upgrade for ${billingInterval === 'month' ? '$9/mo' : '$91.80/yr'}`}
           </button>
-          <button className="w-full sm:w-auto bg-white text-gray-700 px-10 py-4 rounded-2xl font-bold border border-gray-200 hover:bg-gray-50 transition-all">
+          <a 
+            href="mailto:support@applyji.com"
+            className="w-full sm:w-auto bg-white text-gray-700 px-10 py-4 rounded-2xl font-bold border border-gray-200 hover:bg-gray-50 transition-all text-center"
+          >
             Contact Support
-          </button>
+          </a>
         </div>
       </div>
     </div>
