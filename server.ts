@@ -126,7 +126,8 @@ async function startServer() {
       const messages = await fetchEmails(gmail, query);
 
       const results = [];
-      for (const msg of messages) {
+      // Processing only the first 2 emails per sync to stay within Gemini Free Tier rate limits (5 RPM)
+      for (const msg of messages.slice(0, 2)) {
         // Check if we already processed this thread
         const { data: existing } = await supabaseAdmin
           .from('application_activities')
@@ -137,7 +138,29 @@ async function startServer() {
         if (existing) continue;
 
         const email = await getEmailContent(gmail, msg.id);
-        const parsed = await parseJobEmail(email.body || email.snippet);
+        
+        let parsed;
+        try {
+          parsed = await parseJobEmail(email.body || email.snippet);
+        } catch (e: any) {
+          console.error("Gemini API Error during parsing:", e.message || e);
+          if (e.status === 429 || (e.message && e.message.includes('429'))) {
+            console.log('Gemini rate limit hit, using fallback parser based on Subject line!');
+            // Fallback: extract basic info from Subject since AI is unavailable
+            const companyMatch = email.subject.match(/(?:from|at)\s+([A-Z][\w\s]+)/i);
+            const companyName = companyMatch ? companyMatch[1].trim() : 'Unknown Company';
+            
+            parsed = {
+              isJobApplication: true, // We assume true since the Gmail query matched it
+              company: companyName,
+              jobTitle: email.subject || 'Application Received',
+              appliedDate: email.date,
+              platform: 'Email Fallback'
+            };
+          } else {
+            throw e; 
+          }
+        }
 
         if (parsed.isJobApplication) {
           // 1. Create or find application

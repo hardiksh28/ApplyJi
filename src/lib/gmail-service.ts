@@ -51,10 +51,14 @@ export async function getEmailContent(gmail: any, messageId: string) {
     body = Buffer.from(payload.body.data, 'base64').toString();
   }
 
+  const subjectHeader = payload.headers?.find((h: any) => h.name.toLowerCase() === 'subject');
+  const subject = subjectHeader ? subjectHeader.value : '';
+
   return {
     id: messageId,
     threadId: res.data.threadId,
     snippet: res.data.snippet,
+    subject: subject,
     body: body,
     date: new Date(parseInt(res.data.internalDate)).toISOString()
   };
