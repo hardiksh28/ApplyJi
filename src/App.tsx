@@ -11,13 +11,22 @@ import { SavedJobs } from './pages/SavedJobs';
 import { Interviews } from './pages/Interviews';
 import { Tasks } from './pages/Tasks';
 import { Resume } from './pages/Resume';
+import { CoverLetter } from './pages/CoverLetter';
+import { SkillsGap } from './pages/SkillsGap';
 import { Insights } from './pages/Insights';
 import { Settings } from './pages/Settings';
+import { Billing } from './pages/Billing';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search } from 'lucide-react';
 
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Login } from './components/Login';
+import { AuthCallback } from './components/AuthCallback';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Landing } from './components/Landing';
+import { supabase } from './lib/supabase/client';
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -36,53 +45,14 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard onAddClick={() => setIsAddModalOpen(true)} />;
-      case 'applications':
-        return <Applications onAddClick={() => setIsAddModalOpen(true)} />;
-      case 'saved':
-        return <SavedJobs />;
-      case 'interviews':
-        return <Interviews />;
-      case 'tasks':
-        return <Tasks />;
-      case 'resume':
-        return <Resume />;
-      case 'insights':
-        return <Insights />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500">
-            <h2 className="text-xl font-display font-medium mb-2 text-white capitalize">{activeTab} Page</h2>
-            <p className="text-slate-500">This page is under construction. Coming soon!</p>
-          </div>
-        );
-    }
-  };
-
-  return (
+  const AppLayout = ({ children, onAddClick: addClickProp }: { children: React.ReactNode; onAddClick?: () => void }) => (
     <div className="flex h-screen bg-bg-dark overflow-hidden font-sans">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
+      <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Navbar onSearchClick={() => setIsSearchOpen(true)} />
-        
+        <Navbar onSearchClick={() => setIsSearchOpen(true)} onAddClick={addClickProp || (() => setIsAddModalOpen(true))} />
         <main className="flex-1 overflow-y-auto bg-bg-dark/50 p-8">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="h-full"
-            >
-              {renderContent()}
-            </motion.div>
+             {children}
           </AnimatePresence>
         </main>
       </div>
@@ -149,28 +119,83 @@ export default function App() {
               className="relative w-full max-w-lg glass-card bg-surface-dark border-border-dark shadow-2xl p-8"
             >
               <h2 className="text-2xl font-display font-bold text-white mb-6">Add New Application</h2>
-              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setIsAddModalOpen(false); }}>
+              <form className="space-y-4" onSubmit={async (e) => { 
+                e.preventDefault(); 
+                const formData = new FormData(e.currentTarget);
+                const company = formData.get('company') as string;
+                const role = formData.get('role') as string;
+                const status = formData.get('status') as string;
+                const salary = formData.get('salary') as string;
+                const location = formData.get('location') as string;
+                const submitBtn = e.currentTarget.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+                try {
+                  submitBtn.disabled = true;
+                  submitBtn.textContent = 'Creating...';
+
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) throw new Error('Not authenticated');
+
+                  const response = await fetch('/api/applications', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      company_name: company,
+                      job_title: role,
+                      status: status,
+                      salary_range: salary || null,
+                      location: location || null,
+                    }),
+                  });
+
+                  if (!response.ok) {
+                    const err = await response.json();
+                    if (err.code === 'LIMIT_REACHED') {
+                      alert('You have reached the free tier limit of 5 applications per month. Upgrade to Pro for unlimited applications.');
+                      return;
+                    }
+                    throw new Error(err.error || 'Failed to create application');
+                  }
+
+                  setIsAddModalOpen(false);
+                  window.location.reload();
+                } catch (err: any) {
+                  console.error(err);
+                  alert(err.message || 'Failed to create application');
+                } finally {
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Create Application';
+                }
+              }}>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Company Name</label>
-                  <input placeholder="e.g. Google" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
+                  <input name="company" required placeholder="e.g. Google" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Job Role</label>
-                  <input placeholder="e.g. Senior Frontend Engineer" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
+                  <input name="role" required placeholder="e.g. Senior Frontend Engineer" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Status</label>
-                    <select className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none">
-                      <option>Applied</option>
-                      <option>Saved</option>
-                      <option>Interviewing</option>
+                    <select name="status" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none">
+                      <option value="applied">Applied</option>
+                      <option value="saved">Saved</option>
+                      <option value="interviewing">Interviewing</option>
+                      <option value="screening">Screening</option>
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Salary (Optional)</label>
-                    <input placeholder="$150k" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Location</label>
+                    <input name="location" placeholder="e.g. Remote" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Salary Range (Optional)</label>
+                  <input name="salary" placeholder="e.g. ₹15-25 LPA" className="w-full bg-bg-dark border border-border-dark rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-primary outline-none" />
                 </div>
                 <div className="pt-6 flex gap-3">
                   <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 border border-border-dark text-slate-400 font-bold rounded-xl hover:text-white hover:bg-white/5 transition-all">Cancel</button>
@@ -182,6 +207,30 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+  );
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/" element={<Landing />} />
+        
+        <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard onAddClick={() => setIsAddModalOpen(true)} /></AppLayout></ProtectedRoute>} />
+        <Route path="/applications" element={<ProtectedRoute><AppLayout><Applications onAddClick={() => setIsAddModalOpen(true)} /></AppLayout></ProtectedRoute>} />
+        <Route path="/saved" element={<ProtectedRoute><AppLayout><SavedJobs /></AppLayout></ProtectedRoute>} />
+        <Route path="/interviews" element={<ProtectedRoute><AppLayout><Interviews /></AppLayout></ProtectedRoute>} />
+        <Route path="/tasks" element={<ProtectedRoute><AppLayout><Tasks /></AppLayout></ProtectedRoute>} />
+        <Route path="/resume" element={<ProtectedRoute><AppLayout><Resume /></AppLayout></ProtectedRoute>} />
+        <Route path="/cover-letter" element={<ProtectedRoute><AppLayout><CoverLetter /></AppLayout></ProtectedRoute>} />
+        <Route path="/skills-gap" element={<ProtectedRoute><AppLayout><SkillsGap /></AppLayout></ProtectedRoute>} />
+        <Route path="/insights" element={<ProtectedRoute><AppLayout><Insights /></AppLayout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute><AppLayout><Billing /></AppLayout></ProtectedRoute>} />
+
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

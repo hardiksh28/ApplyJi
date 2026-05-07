@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle2, 
   Circle, 
@@ -12,16 +12,59 @@ import {
   Flag,
   RotateCcw
 } from 'lucide-react';
-import { mockTasks } from '../data/mockData';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../lib/supabase/client';
+import { LoadingSpinner, ErrorState } from '../components/CommonUI';
 
 export function Tasks() {
-  const [tasks, setTasks] = useState(mockTasks);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [filter, setFilter] = useState<'All' | 'Todo' | 'Done'>('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data, error: fetchError } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      if (data) setTasks(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleTask = async (id: string, currentStatus: boolean) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !currentStatus } : t));
+    await supabase.from('tasks').update({ completed: !currentStatus }).eq('id', id);
+  };
+
+  const handleNewTask = async () => {
+    const title = window.prompt("Enter new task title:");
+    if (!title) return;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data } = await supabase.from('tasks').insert({
+      user_id: session.user.id,
+      title: title,
+      priority: 'Medium',
+      completed: false,
+      due_date: new Date().toISOString()
+    }).select().single();
+
+    if (data) setTasks([data, ...tasks]);
   };
 
   const filteredTasks = tasks.filter(t => {
@@ -30,6 +73,9 @@ export function Tasks() {
     return true;
   });
 
+  if (loading) return <LoadingSpinner fullPage />;
+  if (error) return <div className="p-8"><ErrorState message={error} onRetry={fetchTasks} /></div>;
+
   return (
     <div className="space-y-8 pb-10 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
@@ -37,7 +83,7 @@ export function Tasks() {
           <h1 className="text-3xl font-display font-bold text-white mb-1">Tasks</h1>
           <p className="text-slate-400">Manage your daily action items and interview prep</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-primary/20 cursor-pointer">
+        <button onClick={handleNewTask} className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-primary/20 cursor-pointer">
           <Plus className="w-5 h-5" />
           <span>New Task</span>
         </button>
@@ -54,22 +100,13 @@ export function Tasks() {
            <div className="glass-card p-4 space-y-4">
               <h3 className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Productivity</h3>
               <div className="flex items-center justify-between">
-                 <span className="text-xs text-slate-400">Streak</span>
-                 <span className="text-xs font-bold text-brand-primary flex items-center gap-1"><RotateCcw className="w-3 h-3" /> 8 Days</span>
+                 <span className="text-xs text-slate-400">Total Tasks</span>
+                 <span className="text-xs font-bold text-brand-primary">{tasks.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                 <span className="text-xs text-slate-400">Completed (Wk)</span>
-                 <span className="text-xs font-bold text-emerald-400">24 Tasks</span>
+                 <span className="text-xs text-slate-400">Completed</span>
+                 <span className="text-xs font-bold text-emerald-400">{tasks.filter(t => t.completed).length} Tasks</span>
               </div>
-           </div>
-
-           <div className="glass-card p-4 bg-amber-400/5 border-amber-400/20">
-              <div className="flex items-center gap-2 mb-3">
-                 <AlertCircle className="w-4 h-4 text-amber-400" />
-                 <h3 className="text-xs font-bold text-white">Upcoming Deadline</h3>
-              </div>
-              <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">Preparation for Google Technical Interview is due in 2 days. 0/5 prep items completed.</p>
-              <button className="w-full py-1.5 bg-amber-400/10 text-amber-400 text-[10px] font-bold rounded hover:bg-amber-400/20 transition-all border border-amber-400/20 uppercase tracking-widest">Focus Mode</button>
            </div>
         </div>
 
@@ -88,7 +125,7 @@ export function Tasks() {
                       task.completed ? "opacity-60 grayscale-[0.5]" : "hover:border-slate-600"
                     )}
                   >
-                    <button onClick={() => toggleTask(task.id)} className="cursor-pointer">
+                    <button onClick={() => toggleTask(task.id, task.completed)} className="cursor-pointer">
                       {task.completed ? (
                         <CheckCircle2 className="w-6 h-6 text-brand-primary" />
                       ) : (
@@ -104,20 +141,14 @@ export function Tasks() {
                        <div className="flex items-center gap-4 mt-1.5">
                           <div className="flex items-center gap-1 text-[10px] text-slate-500 font-medium">
                             <Calendar className="w-3.5 h-3.5" />
-                            {task.dueDate}
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No Due Date'}
                           </div>
-                          {task.applicationId && (
-                            <div className="flex items-center gap-1 text-[10px] text-brand-primary font-bold bg-brand-primary/10 px-2 py-0.5 rounded uppercase tracking-wider">
-                              <TagIcon className="w-3 h-3" />
-                              Synced with App
-                            </div>
-                          )}
                           <div className={cn(
                             "flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest",
                             task.priority === 'High' ? "text-rose-400" : task.priority === 'Medium' ? "text-amber-400" : "text-blue-400"
                           )}>
                              <Flag className="w-3 h-3 fill-current" />
-                             {task.priority}
+                             {task.priority || 'Medium'}
                           </div>
                        </div>
                     </div>

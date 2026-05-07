@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -14,30 +14,40 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-
-const interviews = [
-  { 
-    id: '1', 
-    company: 'Google', 
-    role: 'SWE III', 
-    type: 'Technical Round', 
-    format: 'Video', 
-    date: new Date(2026, 4, 10, 14, 30), 
-    duration: '60 min' 
-  },
-  { 
-    id: '2', 
-    company: 'Stripe', 
-    role: 'Frontend Lead', 
-    type: 'Screening', 
-    format: 'Phone', 
-    date: new Date(2026, 4, 15, 10, 0), 
-    duration: '30 min' 
-  },
-];
+import { supabase } from '../lib/supabase/client';
+import { LoadingSpinner, ErrorState, EmptyState } from '../components/CommonUI';
 
 export function Interviews() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1)); // May 2026
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [interviews, setInterviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchInterviews();
+  }, []);
+
+  const fetchInterviews = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data, error: fetchError } = await supabase
+        .from('applications')
+        .select('*')
+        .ilike('status', 'interviewing')
+        .order('applied_at', { ascending: false });
+      
+      if (fetchError) throw fetchError;
+      if (data) setInterviews(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load interviews');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -48,6 +58,9 @@ export function Interviews() {
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+
+  if (loading) return <LoadingSpinner fullPage />;
+  if (error) return <div className="p-8"><ErrorState message={error} onRetry={fetchInterviews} /></div>;
 
   return (
     <div className="space-y-8 h-full flex flex-col">
@@ -74,7 +87,7 @@ export function Interviews() {
                 <button onClick={prevMonth} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all cursor-pointer">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button onClick={() => setCurrentDate(new Date(2026, 4, 1))} className="px-3 py-1 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer">Today</button>
+                <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer">Today</button>
                 <button onClick={nextMonth} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all cursor-pointer">
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -91,7 +104,9 @@ export function Interviews() {
 
             <div className="grid grid-cols-7 flex-1">
               {calendarDays.map((day, idx) => {
-                const dayInterviews = interviews.filter(i => isSameDay(i.date, day));
+                // Since we don't have explicit interview dates natively, we mock it using applied_at for demo or skip
+                // For a real app, you'd add interview_date to the applications table. We'll map applied_at as the "interview date" for display purposes
+                const dayInterviews = interviews.filter(i => i.applied_at && isSameDay(new Date(i.applied_at), day));
                 return (
                   <div 
                     key={day.toString()} 
@@ -103,14 +118,14 @@ export function Interviews() {
                   >
                     <span className={cn(
                       "text-xs font-bold inline-block w-6 h-6 leading-6 text-center rounded-full mb-1",
-                      isSameDay(day, new Date(2026, 4, 7)) ? "bg-brand-primary text-white" : "text-slate-500"
+                      isSameDay(day, new Date()) ? "bg-brand-primary text-white" : "text-slate-500"
                     )}>
                       {format(day, 'd')}
                     </span>
                     <div className="space-y-1">
                       {dayInterviews.map(i => (
                         <div key={i.id} className="text-[10px] p-1.5 rounded bg-brand-primary/20 border border-brand-primary/30 text-brand-primary font-bold truncate cursor-pointer hover:bg-brand-primary/30 transition-all">
-                          {i.company} Round
+                          {i.company_name}
                         </div>
                       ))}
                     </div>
@@ -126,27 +141,28 @@ export function Interviews() {
           <div className="glass-card p-6">
             <h3 className="text-lg font-display font-bold text-white mb-6">Upcoming</h3>
             <div className="space-y-4">
-              {interviews.map(i => (
+              {interviews.length > 0 ? interviews.map(i => (
                 <div key={i.id} className="p-4 rounded-xl bg-surface-dark border border-border-dark hover:border-brand-primary/50 transition-all group">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                       {i.format === 'Video' ? <Video className="w-4 h-4 text-blue-400" /> : <Phone className="w-4 h-4 text-emerald-400" />}
-                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{i.format} Call</span>
+                       <Video className="w-4 h-4 text-blue-400" />
+                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Interview</span>
                     </div>
                     <button className="text-slate-500 hover:text-white"><MoreVertical className="w-4 h-4" /></button>
                   </div>
-                  <h4 className="font-bold text-white mb-1 group-hover:text-brand-primary transition-colors">{i.company}</h4>
-                  <p className="text-xs text-slate-400 mb-4">{i.type} • {i.role}</p>
+                  <h4 className="font-bold text-white mb-1 group-hover:text-brand-primary transition-colors">{i.company_name}</h4>
+                  <p className="text-xs text-slate-400 mb-4">{i.job_title}</p>
                   
                   <div className="flex items-center justify-between pt-3 border-t border-white/5">
                     <div className="flex items-center gap-2 text-[10px] text-slate-500">
                       <Clock className="w-3.5 h-3.5 text-brand-primary" />
-                      <span>{format(i.date, 'MMM d, h:mm a')}</span>
+                      <span>{i.applied_at ? format(new Date(i.applied_at), 'MMM d, h:mm a') : 'TBD'}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-medium">{i.duration}</span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-slate-500">No interviews scheduled right now.</p>
+              )}
             </div>
           </div>
 
