@@ -46,7 +46,7 @@ async function withRetry<T>(
 
 export interface AIUsageLog {
   userId: string;
-  feature: 'resume_generate' | 'resume_analyze' | 'cover_letter' | 'skills_gap' | 'follow_up' | 'email_parse';
+  feature: 'resume_generate' | 'resume_analyze' | 'cover_letter' | 'skills_gap' | 'follow_up' | 'email_parse' | 'ats_score';
   model: string;
   promptTokens?: number;
   completionTokens?: number;
@@ -56,6 +56,83 @@ export interface AIUsageLog {
   errorMessage?: string;
   metadata?: Record<string, any>;
 }
+
+// ... existing code ...
+
+/**
+ * FEATURE 4: ATS Resume Score Checker
+ * Performs deep analysis for keyword density, formatting, length, and section completeness.
+ */
+export async function checkATSScore(
+  resumeText: string,
+  jobDescription: string
+) {
+  return withRetry(async () => {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: `Analyze the following resume against the job description for ATS (Applicant Tracking System) compatibility.
+    
+    Resume:
+    """
+    ${resumeText}
+    """
+    
+    Job Description:
+    """
+    ${jobDescription}
+    """`,
+      config: {
+        systemInstruction: "You are a specialized ATS optimization expert. Evaluate the resume's effectiveness for a modern ATS. Focus on keyword matching, structural integrity, and professional standards. Always output valid JSON matching the schema.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            overallScore: { type: Type.NUMBER },
+            breakdown: {
+              type: Type.OBJECT,
+              properties: {
+                keywords: { type: Type.NUMBER },
+                formatting: { type: Type.NUMBER },
+                length: { type: Type.NUMBER },
+                sections: { type: Type.NUMBER },
+              },
+              required: ["keywords", "formatting", "length", "sections"],
+            },
+            issues: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            suggestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            keywordAnalysis: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  skill: { type: Type.STRING },
+                  found: { type: Type.BOOLEAN },
+                  importance: { type: Type.STRING, description: "critical, high, or moderate" },
+                },
+                required: ["skill", "found", "importance"],
+              },
+            },
+          },
+          required: ["overallScore", "breakdown", "issues", "suggestions", "keywordAnalysis"],
+        },
+      },
+    });
+
+    try {
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error("Failed to parse ATS score response:", error);
+      throw new Error("Failed to check ATS score");
+    }
+  });
+}
+
 
 /**
  * Logs AI usage to the database for cost tracking.

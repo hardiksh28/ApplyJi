@@ -17,13 +17,15 @@ import {
   Sparkles,
   PenTool,
   Target,
-  FileText
+  FileText,
+  BrainCircuit
 } from 'lucide-react';
 import { ApplicationStatus } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase/client';
 import { LoadingSpinner, EmptyState, ErrorState } from '../components/CommonUI';
+import { KanbanBoard } from '../components/KanbanBoard';
 
 const statuses: ApplicationStatus[] = ['Saved', 'Applied', 'Screening', 'Interviewing', 'Offer', 'Rejected', 'Ghosted'];
 
@@ -317,44 +319,16 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex gap-4 overflow-x-auto pb-4 h-full"
+              className="h-full"
             >
-              {statuses.map((status) => (
-                <div key={status} className="flex-shrink-0 w-80 flex flex-col gap-4">
-                  <div className="flex items-center justify-between px-2">
-                    <div className="flex items-center gap-2">
-                      <div className={cn("w-1.5 h-1.5 rounded-full", getStatusDot(status))}></div>
-                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">{status}</h4>
-                      <span className="text-xs text-slate-500 bg-surface-dark px-1.5 py-0.5 rounded border border-border-dark">{applications.filter(a => (a.status || 'Applied').toLowerCase() === status.toLowerCase()).length}</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-3 p-2 bg-surface-dark/30 rounded-2xl border border-border-dark/50">
-                    {applications.filter(a => (a.status || 'Applied').toLowerCase() === status.toLowerCase()).map(app => (
-                      <div 
-                        key={app.id} 
-                        onClick={() => {
-                          setSelectedApp(app);
-                          setNoteDraft(app.notes || '');
-                        }}
-                        className="glass-card p-4 hover:border-brand-primary transition-all cursor-pointer group"
-                      >
-                        <h5 className="font-bold text-white mb-1 group-hover:text-brand-primary transition-colors">{app.company_name}</h5>
-                        <p className="text-xs text-slate-400 mb-3">{app.job_title}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-slate-500">{app.location || 'Remote'}</span>
-                        </div>
-                      </div>
-                    ))}
-                    <button 
-                      onClick={onAddClick}
-                      className="w-full py-2 flex items-center justify-center gap-2 border border-dashed border-border-dark rounded-xl text-slate-500 hover:text-white hover:border-slate-600 transition-all text-xs font-medium cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Add Job
-                    </button>
-                  </div>
-                </div>
-              ))}
+               <KanbanBoard 
+                  applications={filteredApps} 
+                  onStatusChange={updateStatus}
+                  onCardClick={(app) => {
+                    setSelectedApp(app);
+                    setNoteDraft(app.notes || '');
+                  }}
+               />
             </motion.div>
           )}
         </AnimatePresence>
@@ -548,7 +522,68 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-all" />
                       </button>
+
+                      {['interviewing', 'interview'].includes((selectedApp.status || '').toLowerCase()) && (
+                        <button 
+                          onClick={async () => {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            if (!session) return;
+                            setActionLoading('prep-' + selectedApp.id);
+                            try {
+                              const response = await fetch('/api/interview-prep/generate', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${session.access_token}`,
+                                },
+                                body: JSON.stringify({ 
+                                  jobId: selectedApp.id,
+                                  companyName: selectedApp.company_name,
+                                  role: selectedApp.job_title
+                                }),
+                              });
+                              const data = await response.json();
+                              setApplications(apps => apps.map(a => a.id === selectedApp.id ? { ...a, interview_prep_data: data } : a));
+                              setSelectedApp({ ...selectedApp, interview_prep_data: data });
+                            } catch (err) {
+                              alert('Failed to generate prep: ' + (err as Error).message);
+                            } finally {
+                              setActionLoading(null);
+                            }
+                          }}
+                          disabled={actionLoading === 'prep-' + selectedApp.id}
+                          className="w-full flex items-center justify-between p-3 rounded-xl bg-amber-400/5 border border-amber-400/20 hover:bg-amber-400/10 transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-400/10 rounded-lg">
+                              {actionLoading === 'prep-' + selectedApp.id ? <Loader2 className="w-4 h-4 animate-spin text-amber-400" /> : <BrainCircuit className="w-4 h-4 text-amber-400" />}
+                            </div>
+                            <div className="text-left">
+                              <p className="text-xs font-bold text-white">Interview Prep</p>
+                              <p className="text-[9px] text-slate-500">Generate AI questions</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-all" />
+                        </button>
+                      )}
                     </div>
+
+                    {selectedApp.interview_prep_data?.questions && (
+                      <div className="mt-4 p-4 rounded-xl bg-surface-dark border border-border-dark space-y-4">
+                        <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                          <Sparkles className="w-3 h-3" />
+                          AI Prep Sheet
+                        </h4>
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
+                          {selectedApp.interview_prep_data.questions.map((q: any, i: number) => (
+                            <div key={i} className="space-y-1">
+                              <p className="text-xs font-bold text-white">Q: {q.q}</p>
+                              <p className="text-[11px] text-slate-400 italic">A: {q.a}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </section>
                 </div>
 

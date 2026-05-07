@@ -912,6 +912,376 @@ async function startServer() {
     }
   });
 
+  // PHASE 3 — JOB DISCOVERY & SEARCH
+
+  // 1. Search & Filter Jobs
+  app.get('/api/jobs', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { q, location, skills, salary_min, salary_max, source, sort = 'recent', limit = 20, offset = 0 } = req.query;
+      
+      let query = supabaseAdmin
+        .from('jobs')
+        .select('*', { count: 'exact' })
+        .eq('is_active', true);
+
+      // Full-text Search
+      if (q) {
+        query = query.textSearch('job_search_vector', q as string);
+      }
+
+      // Filters
+      if (location) query = query.ilike('location', `%${location}%`);
+      if (source) query = query.eq('source', source);
+      if (salary_min) query = query.gte('salary_min', parseInt(salary_min as string));
+      if (salary_max) query = query.lte('salary_max', parseInt(salary_max as string));
+      
+      // Skills Filter (GIN array match)
+      if (skills) {
+        const skillsArray = (skills as string).split(',');
+        query = query.contains('skills', skillsArray);
+      }
+
+      // Sorting
+      if (sort === 'recent') {
+        query = query.order('posted_at', { ascending: false });
+      }
+
+      const { data, count, error } = await query
+        .range(Number(offset), Number(offset) + Number(limit) - 1);
+
+      if (error) throw error;
+
+      res.json({ jobs: data, total: count });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 2. Smart Recommendations
+  app.get('/api/jobs/recommended', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { JobDiscoveryService } = await import('./src/lib/job-discovery-service.ts');
+      const discovery = new JobDiscoveryService(supabaseAdmin);
+      const recommendations = await discovery.getRecommendedJobs(req.user.id);
+      res.json(recommendations);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 3. One-Click Apply (Pro-gated)
+  app.post('/api/apply/one-click', authenticate, requirePro, async (req: AuthRequest, res) => {
+    try {
+      const { jobId } = req.body;
+      if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+
+      const { AutoApplyService } = await import('./src/lib/auto-apply-service.ts');
+      const autoApply = new AutoApplyService(supabaseAdmin);
+      
+      const result = await autoApply.applyToJob(req.user.id, jobId);
+      res.json(result);
+    } catch (err: any) {
+      if (err.message === 'DAILY_LIMIT_REACHED') {
+        return res.status(429).json({ error: 'You have reached your daily limit of 10 auto-applies.' });
+      }
+      if (err.message === 'ONE_CLICK_APPLY_PRO_ONLY') {
+        return res.status(403).json({ error: 'One-click apply is a Pro-only feature.', code: 'PRO_REQUIRED' });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 4. Admin — Trigger Aggregation
+  app.post('/api/admin/jobs/aggregate', authenticate, async (req: AuthRequest, res) => {
+    // Basic admin check (could be refined)
+    if (req.user.email !== process.env.ADMIN_EMAIL && req.user.id !== process.env.ADMIN_ID) {
+      // For demo, we allow if user has enterprise role
+      const { data: profile } = await supabaseAdmin.from('profiles').select('subscription_tier').eq('id', req.user.id).single();
+      if (profile?.subscription_tier !== 'enterprise') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+    }
+
+    try {
+      const { JobDiscoveryService } = await import('./src/lib/job-discovery-service.ts');
+      const discovery = new JobDiscoveryService(supabaseAdmin);
+      const jobs = await discovery.runAggregationPipeline();
+      res.json({ message: 'Aggregation complete', count: jobs?.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 5. Admin — Stats
+  app.get('/api/admin/jobs/stats', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { data, error } = await supabaseAdmin.rpc('get_job_stats');
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 6. Interview Prep (AI)
+  app.post('/api/interview-prep/generate', authenticate, requirePro, async (req: AuthRequest, res) => {
+    try {
+      const { jobId, companyName, role } = req.body;
+      if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+
+      // 1. Fetch user's resume/profile for context
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('skills, experience')
+        .eq('id', req.user.id)
+        .single();
+
+      const context = `Skills: ${JSON.stringify(profile?.skills)}. Experience: ${JSON.stringify(profile?.experience)}`;
+
+      // 2. Generate prep via Intelligence Service
+      const { EmailIntelligenceService } = await import('./src/lib/email-intelligence.ts');
+      const emailIntel = new EmailIntelligenceService(supabaseAdmin, process.env.GEMINI_API_KEY!);
+      
+      const prepData = await emailIntel.generateInterviewPrep(role, companyName, context);
+
+      // 3. Update application with prep data
+      const { data, error } = await supabaseAdmin
+        .from('applications')
+        .update({ interview_prep_data: prepData })
+        .eq('id', jobId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json(prepData);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 7. ATS Resume Score Checker
+  app.post('/api/resume/ats-score', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { resumeText, jobDescriptionText } = req.body;
+      if (!resumeText || !jobDescriptionText) return res.status(400).json({ error: 'Missing resume or job description' });
+
+      const { checkATSScore } = await import('./src/lib/ai/gemini.ts');
+      const scoreData = await checkATSScore(resumeText, jobDescriptionText);
+      res.json(scoreData);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 8. Profile Completeness
+  app.get('/api/profile/completeness', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', req.user.id).single();
+      if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+      let score = 0;
+      const missingFields = [];
+
+      const weights: Record<string, number> = {
+        full_name: 5,
+        current_role: 5,
+        location: 5,
+        avatar_url: 5,
+        summary: 10,
+        experience: 20,
+        education: 10,
+        skills: 15,
+        phone: 5,
+        linkedin_url: 5,
+        portfolio_url: 5,
+        autofill_data: 10
+      };
+
+      for (const [field, weight] of Object.entries(weights)) {
+        const val = profile[field];
+        const isSet = val && (Array.isArray(val) ? val.length > 0 : typeof val === 'object' ? Object.keys(val).length > 0 : true);
+        if (isSet) {
+          score += weight;
+        } else {
+          missingFields.push(field);
+        }
+      }
+
+      res.json({ score, missingFields });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 9. Market Intelligence: Trending Skills
+  app.get('/api/market/trending-skills', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { role, location } = req.query;
+      
+      let query = supabaseAdmin.from('jobs').select('skills');
+      if (role) query = query.ilike('title', `%${role}%`);
+      if (location) query = query.ilike('location', `%${location}%`);
+
+      const { data: jobs } = await query.limit(100);
+      
+      const skillCounts: Record<string, number> = {};
+      jobs?.forEach(job => {
+        const skills = job.skills || [];
+        skills.forEach((s: string) => {
+          skillCounts[s] = (skillCounts[s] || 0) + 1;
+        });
+      });
+
+      const trending = Object.entries(skillCounts)
+        .map(([skill, count]) => ({ skill, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+
+      res.json(trending);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PHASE 6: Community & Growth Endpoints
+
+  // 10. Referral Stats
+  app.get('/api/referrals/:userId', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { data: profile } = await supabaseAdmin.from('profiles').select('referral_code').eq('id', req.params.userId).single();
+      const { data: referrals } = await supabaseAdmin.from('referrals').select('*').eq('referrer_id', req.params.userId);
+      
+      const totalReferrals = referrals?.length || 0;
+      const earnedRewards = referrals?.filter(r => r.status === 'rewarded').length || 0;
+      const pendingRewards = referrals?.filter(r => r.status === 'pending').length || 0;
+
+      res.json({
+        code: profile?.referral_code,
+        referralUrl: `https://applyji.in/ref/${profile?.referral_code}`,
+        totalReferrals,
+        earnedRewards,
+        pendingRewards
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 11. Company Reviews
+  const PROFANITY_LIST = ['badword1', 'badword2']; // Simplified list
+  const hasProfanity = (text: string) => PROFANITY_LIST.some(word => text.toLowerCase().includes(word));
+
+  app.get('/api/companies/:name/reviews', async (req, res) => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('company_reviews')
+        .select('*, profiles(full_name, avatar_url)')
+        .ilike('company_name', req.params.name)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/companies/reviews', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { companyName, rating, title, body, interviewExperience, offerReceived } = req.body;
+      
+      if (hasProfanity(body) || hasProfanity(title)) {
+        return res.status(400).json({ error: 'Review contains inappropriate language.' });
+      }
+
+      // Check if user already reviewed this company
+      const { data: existing } = await supabaseAdmin
+        .from('company_reviews')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .ilike('company_name', companyName)
+        .single();
+
+      if (existing) return res.status(400).json({ error: 'You have already reviewed this company.' });
+
+      const { data, error } = await supabaseAdmin
+        .from('company_reviews')
+        .insert({
+          user_id: req.user.id,
+          company_name: companyName,
+          rating,
+          title,
+          body,
+          interview_experience: interviewExperience,
+          offer_received: offerReceived
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/companies/reviews/:id/helpful', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { error: voteError } = await supabaseAdmin
+        .from('review_votes')
+        .insert({ review_id: req.params.id, user_id: req.user.id });
+
+      if (voteError) {
+        if (voteError.code === '23505') return res.status(400).json({ error: 'Already voted.' });
+        throw voteError;
+      }
+
+      await supabaseAdmin.rpc('increment_helpful_votes', { row_id: req.params.id });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 12. Mentor Marketplace
+  app.get('/api/mentors', async (req, res) => {
+    try {
+      const { specialty, maxPrice } = req.query;
+      let query = supabaseAdmin.from('mentor_profiles').select('*, profiles(full_name, avatar_url)').eq('is_active', true);
+      
+      if (specialty) query = query.contains('specialties', [specialty]);
+      if (maxPrice) query = query.lte('price_per_hour', maxPrice);
+
+      const { data, error } = await query.order('rating', { ascending: false });
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/bookings', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { mentorId, slot, message } = req.body;
+      const { data, error } = await supabaseAdmin
+        .from('mentor_bookings')
+        .insert({
+          user_id: req.user.id,
+          mentor_id: mentorId,
+          slot,
+          message
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Supabase Auth Webhook
   app.post('/api/webhooks/supabase', (req, res) => {
     res.status(200).end();

@@ -14,7 +14,11 @@ import {
   X,
   Loader2,
   Sparkles,
-  Briefcase
+  Briefcase,
+  Trophy,
+  Users,
+  Copy,
+  Share2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase/client';
@@ -38,10 +42,34 @@ export function Settings() {
   const [education, setEducation] = useState<any[]>([]);
   const [preferences, setPreferences] = useState({ open_to_opportunities: true, ghosting_detection: true });
   const [isSaving, setIsSaving] = useState(false);
+  const [completeness, setCompleteness] = useState<{score: number, missingFields: string[]}>({score: 0, missingFields: []});
+  const [referralStats, setReferralStats] = useState<any>(null);
 
   useEffect(() => {
     fetchProfile();
+    fetchCompleteness();
+    fetchReferralStats();
   }, []);
+
+  const fetchReferralStats = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const response = await fetch(`/api/referrals/${session.user.id}`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    const data = await response.json();
+    setReferralStats(data);
+  };
+
+  const fetchCompleteness = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const response = await fetch('/api/profile/completeness', {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    const data = await response.json();
+    setCompleteness(data);
+  };
 
   const fetchProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -161,6 +189,103 @@ export function Settings() {
           )}
         </div>
       </div>
+
+      {/* Profile Completeness Meter */}
+      <div className="glass-card p-6 bg-gradient-to-br from-brand-primary/5 to-transparent border-brand-primary/20">
+         <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+               <div className={cn(
+                 "p-2 rounded-lg",
+                 completeness.score === 100 ? "bg-amber-400/20 text-amber-400" : "bg-brand-primary/20 text-brand-primary"
+               )}>
+                  <Trophy className="w-5 h-5" />
+               </div>
+               <div>
+                  <h3 className="text-sm font-bold text-white">Profile Completeness</h3>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                    {completeness.score === 100 ? "Perfect! Your profile is job-ready." : `${100 - completeness.score}% remaining to reach 100%`}
+                  </p>
+               </div>
+            </div>
+            <span className="text-2xl font-display font-bold text-white">{completeness.score}%</span>
+         </div>
+         <div className="h-2 bg-surface-dark rounded-full overflow-hidden mb-6">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${completeness.score}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(var(--brand-primary-rgb),0.5)]" 
+            />
+         </div>
+         
+         {completeness.missingFields.length > 0 && (
+           <div className="flex flex-wrap gap-2">
+              {completeness.missingFields.map((field) => (
+                <div key={field} className="px-3 py-1.5 rounded-lg bg-surface-dark border border-border-dark flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                   <div className="w-1 h-1 rounded-full bg-slate-600" />
+                   {field.replace('_', ' ')}
+                </div>
+              ))}
+           </div>
+         )}
+      </div>
+
+      {/* Referral Dashboard */}
+      {referralStats && (
+        <div className="glass-card p-6 border-brand-primary/20 bg-brand-primary/[0.03]">
+           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1 flex-1">
+                 <div className="flex items-center gap-2 text-brand-primary mb-2">
+                    <Users className="w-4 h-4" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest">Referral Program</h3>
+                 </div>
+                 <h2 className="text-xl font-display font-bold text-white">Give 1 Month, Get 1 Month</h2>
+                 <p className="text-sm text-slate-400">Invite friends to ApplyJi. When they upgrade to Pro, you both get 30 days of Pro features for free.</p>
+              </div>
+              
+              <div className="bg-bg-dark/50 border border-border-dark p-4 rounded-2xl min-w-[300px]">
+                 <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Your Referral Link</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(referralStats.referralUrl);
+                        alert('Link copied to clipboard!');
+                      }}
+                      className="text-[10px] font-bold text-brand-primary hover:text-white transition-colors flex items-center gap-1"
+                    >
+                       <Copy className="w-3 h-3" /> Copy
+                    </button>
+                 </div>
+                 <div className="bg-surface-dark px-3 py-2 rounded-lg text-xs font-mono text-slate-300 truncate mb-4 border border-border-dark/50">
+                    {referralStats.referralUrl}
+                 </div>
+                 <div className="flex gap-2">
+                    <button className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-2">
+                       <Share2 className="w-3 h-3" /> WhatsApp
+                    </button>
+                    <button className="flex-1 py-2 bg-[#0077b5] hover:bg-[#006396] text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-2">
+                       <Linkedin className="w-3 h-3" /> LinkedIn
+                    </button>
+                 </div>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-brand-primary/10">
+              <div className="text-center">
+                 <p className="text-2xl font-display font-bold text-white">{referralStats.totalReferrals}</p>
+                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Referrals</p>
+              </div>
+              <div className="text-center border-x border-border-dark">
+                 <p className="text-2xl font-display font-bold text-white">{referralStats.pendingRewards}</p>
+                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Pending</p>
+              </div>
+              <div className="text-center">
+                 <p className="text-2xl font-display font-bold text-emerald-400">{referralStats.earnedRewards}</p>
+                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Earned Pro Months</p>
+              </div>
+           </div>
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Profile Section */}

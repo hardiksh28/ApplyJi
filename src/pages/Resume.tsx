@@ -12,7 +12,10 @@ import {
   Zap,
   Loader2,
   Lock,
-  Copy
+  Copy,
+  Target,
+  XCircle,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -37,10 +40,41 @@ export function Resume() {
       setJobDescription(decodeURIComponent(jd));
     }
   }, []);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [generatedResume, setGeneratedResume] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats'>('preview');
+  const [atsResult, setAtsResult] = useState<any>(null);
+  const [isAtsChecking, setIsAtsChecking] = useState(false);
+
+  const handleATSCheck = async () => {
+    if (!jobDescription) {
+      setScanError('Please enter a job description to check ATS compatibility.');
+      return;
+    }
+    setIsAtsChecking(true);
+    setScanError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const response = await fetch('/api/resume/ats-score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          resumeText: "Main Software Engineer Resume Content...", // Simplified
+          jobDescriptionText: jobDescription 
+        }),
+      });
+      const data = await response.json();
+      setAtsResult(data);
+      setActiveTab('ats');
+    } catch (err) {
+      console.error(err);
+      setScanError('Failed to check ATS score');
+    } finally {
+      setIsAtsChecking(false);
+    }
+  };
 
   const startScan = async () => {
     if (!jobDescription) {
@@ -130,134 +164,37 @@ export function Resume() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white mb-1">Resume & CV</h1>
           <p className="text-slate-400">Manage your documents and optimize them for ATS</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-primary/20 cursor-pointer">
-          <Upload className="w-5 h-5" />
-          <span>Upload Resume</span>
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: List */}
-        <div className="lg:col-span-1 space-y-4">
-          <h3 className="text-xs uppercase font-bold text-slate-500 tracking-wider mb-2 px-2">Uploaded Versions</h3>
-          {resumes.map((resume) => (
-            <div 
-              key={resume.id}
-              onClick={() => setSelectedResume(resume)}
-              className={cn(
-                "glass-card p-4 hover:border-brand-primary transition-all cursor-pointer group",
-                selectedResume.id === resume.id ? "border-brand-primary bg-brand-primary/5 shadow-inner" : "border-border-dark"
-              )}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="p-2 rounded-lg bg-surface-dark group-hover:bg-brand-primary/20 transition-colors">
-                  <FileText className="w-5 h-5 text-brand-primary" />
-                </div>
-                <div className="flex items-center gap-1">
-                   <span className="text-[10px] font-bold text-slate-500 bg-surface-dark px-1.5 py-0.5 rounded">v{resume.version}</span>
-                </div>
-              </div>
-              <h4 className="text-sm font-bold text-white truncate mb-1">{resume.name}</h4>
-              <p className="text-[10px] text-slate-500 mb-3">{resume.date} • {resume.size}</p>
-              <div className="flex flex-wrap gap-1">
-                {resume.tags.map(tag => (
-                   <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-slate-400 uppercase tracking-wider">{tag}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-          
-          <button className="w-full py-6 border-2 border-dashed border-border-dark rounded-xl text-slate-500 hover:text-brand-primary hover:border-brand-primary/50 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer group">
-             <Upload className="w-6 h-6 group-hover:scale-110 transition-transform" />
-             <span className="text-sm font-bold">Upload New Version</span>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-surface-dark border border-border-dark p-1 rounded-xl">
+             {['preview', 'ats'].map((tab) => (
+               <button 
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer uppercase tracking-wider",
+                  activeTab === tab ? "bg-brand-primary text-white shadow-lg" : "text-slate-500 hover:text-white"
+                )}
+               >
+                 {tab === 'ats' ? 'ATS Score' : 'Analyzer'}
+               </button>
+             ))}
+          </div>
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-primary/20 cursor-pointer">
+            <Upload className="w-5 h-5" />
+            <span>Upload New</span>
           </button>
         </div>
+      </div>
 
-        {/* Right Column: AI Insights */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-8">
-             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                <div className="flex items-center gap-4">
-                  <div className="relative w-24 h-24">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-border-dark" />
-                      <circle 
-                         cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" 
-                         strokeDasharray={2 * Math.PI * 40}
-                         strokeDashoffset={2 * Math.PI * 40 * (1 - (analysisResult?.score || selectedResume.score) / 100)}
-                         className="text-brand-primary transition-all duration-1000 ease-out" 
-                       />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-display font-bold text-white">{analysisResult?.score || selectedResume.score}</span>
-                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">ATS Score</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-display font-bold text-white mb-1">
-                      Match Level: {analysisResult?.matchLevel || 'Strong'}
-                    </h2>
-                    <p className="text-sm text-slate-400 max-w-xs">
-                      {analysisResult?.summary || "Your resume is well-optimized for technical roles but could benefit from more quantitative achievements."}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="p-2.5 rounded-xl bg-surface-dark border border-border-dark text-slate-400 hover:text-white transition-all cursor-pointer"><Eye className="w-4 h-4" /></button>
-                  <button className="p-2.5 rounded-xl bg-surface-dark border border-border-dark text-slate-400 hover:text-white transition-all cursor-pointer"><Download className="w-4 h-4" /></button>
-                  <button className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                </div>
-             </div>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-xs uppercase font-bold text-slate-500 tracking-wider flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    Key Strengths
-                  </h3>
-                  <div className="space-y-2">
-                    {(analysisResult?.strengths || [
-                      'Clear contact information',
-                      'Standardized headers',
-                      'Relevant technical skills keyword density',
-                      'Proper font & margin utilization'
-                    ]).map((item: string, i: number) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-slate-300 bg-emerald-400/5 p-2 rounded-lg border border-emerald-400/10">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-xs uppercase font-bold text-slate-500 tracking-wider flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                    Improvements
-                  </h3>
-                  <div className="space-y-2">
-                    {(analysisResult?.improvements || [
-                      'Add more metric-driven bullet points',
-                      'Link to specific project repositories',
-                      'Expand on cloud infrastructure experience',
-                      'Clean up date formatting consistency'
-                    ]).map((item: string, i: number) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-slate-300 bg-rose-400/5 p-2 rounded-lg border border-rose-400/10">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-             </div>
-          </div>
-
-          {/* AI Job Matcher */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Job Matcher */}
+        <div className="lg:col-span-4 space-y-6">
           <div className="glass-card p-6 bg-gradient-to-br from-brand-primary/10 via-bg-dark to-brand-secondary/5 border-brand-primary/20">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -265,173 +202,190 @@ export function Resume() {
                    <BrainCircuit className="w-5 h-5" />
                  </div>
                  <div>
-                   <h3 className="text-lg font-display font-bold text-white">Tailor to Job</h3>
-                   <p className="text-xs text-slate-400">Paste a Job Description to generate a tailored version</p>
+                   <h3 className="text-lg font-display font-bold text-white">Target Job</h3>
                  </div>
               </div>
-              {isScanning && (
-                <div className="flex items-center gap-2 text-brand-primary font-bold text-xs">
-                   <Loader2 className="w-3 h-3 animate-spin" />
-                   Analyzing...
-                </div>
-              )}
-              {isGenerating && (
-                <div className="flex items-center gap-2 text-brand-primary font-bold text-xs">
-                   <Loader2 className="w-3 h-3 animate-spin" />
-                   Generating...
-                </div>
-              )}
             </div>
-
-            {/* Error Message */}
-            {scanError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3">
-                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                <p className="text-xs text-rose-300 flex-1">{scanError}</p>
-                <button onClick={() => setScanError(null)} className="text-xs text-rose-400 hover:text-white font-bold cursor-pointer">✕</button>
-              </div>
-            )}
             
             <textarea 
               placeholder="Paste job description here..."
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
-              className="w-full h-40 bg-bg-dark/50 border border-border-dark rounded-xl p-4 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-all mb-4 resize-none"
+              className="w-full h-48 bg-bg-dark/50 border border-border-dark rounded-xl p-4 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-all mb-4 resize-none"
             />
             
-            <div className="flex items-center justify-between">
-               <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                  <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-amber-400" /> Powered by Gemini 3</span>
-                  <span className="px-2 py-0.5 rounded bg-surface-dark text-[10px] border border-border-dark uppercase tracking-widest text-slate-500 flex items-center gap-1">
-                    <Lock className="w-2.5 h-2.5" /> Pro
-                  </span>
-               </div>
-               <div className="flex gap-2">
-                 <button 
-                  onClick={generateResume}
-                  disabled={isGenerating || isScanning}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-all disabled:opacity-50 cursor-pointer text-sm shadow-xl shadow-white/5"
-                 >
-                   <Sparkles className="w-4 h-4 text-brand-primary" />
-                   {isGenerating ? 'Generating...' : 'Tailor Resume'}
-                 </button>
-                 <button 
-                  onClick={startScan}
-                  disabled={isScanning || isGenerating}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-surface-dark border border-border-dark text-white font-bold rounded-xl hover:bg-white/10 transition-all disabled:opacity-50 cursor-pointer"
-                 >
-                   <Zap className="w-4 h-4 text-brand-primary fill-brand-primary" />
-                   {isScanning ? 'Processing...' : 'Run Analysis'}
-                 </button>
-               </div>
+            <div className="space-y-2">
+              <button 
+                onClick={generateResume}
+                disabled={isGenerating || isScanning}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-all disabled:opacity-50 cursor-pointer text-sm shadow-xl shadow-white/5"
+              >
+                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-brand-primary" />}
+                Tailor Resume
+              </button>
+              <button 
+                onClick={handleATSCheck}
+                disabled={isAtsChecking || isGenerating}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-surface-dark border border-border-dark text-white font-bold rounded-xl hover:bg-white/10 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isAtsChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4 text-brand-primary" />}
+                ATS Scan
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Generated Resume Output */}
-          {generatedResume && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-0 overflow-hidden"
-            >
-              <div className="p-6 border-b border-border-dark flex items-center justify-between bg-brand-primary/5">
-                <div className="flex items-center gap-3">
-                   <div className="p-2 bg-brand-primary/20 rounded-lg">
-                     <FileText className="w-5 h-5 text-brand-primary" />
-                   </div>
-                   <div>
-                     <h3 className="text-lg font-display font-bold text-white">Tailored Resume Preview</h3>
-                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Generated AI Version</p>
-                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(JSON.stringify(generatedResume, null, 2));
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 border border-border-dark text-slate-300 text-xs font-bold rounded-lg hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    Copy JSON
-                  </button>
-                  <button 
-                    className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-secondary transition-all cursor-pointer shadow-lg shadow-brand-primary/20"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Export PDF
-                  </button>
-                </div>
-              </div>
-              
-              <div className="p-8 space-y-8 max-h-[600px] overflow-y-auto bg-bg-dark/30">
-                 {/* Summary */}
-                 <section className="space-y-2">
-                    <h4 className="text-xs font-bold text-brand-primary uppercase tracking-[0.2em]">Professional Summary</h4>
-                    <p className="text-sm text-slate-300 leading-relaxed italic border-l-2 border-brand-primary/30 pl-4">{generatedResume.summary}</p>
-                 </section>
+        {/* Right Column: Content */}
+        <div className="lg:col-span-8">
+           <AnimatePresence mode="wait">
+             {activeTab === 'ats' && atsResult ? (
+               <motion.div
+                key="ats-results"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6"
+               >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
+                       <div className="relative w-32 h-32 mb-4">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-border-dark" />
+                            <circle 
+                              cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" 
+                              strokeDasharray={2 * Math.PI * 58}
+                              strokeDashoffset={2 * Math.PI * 58 * (1 - atsResult.overallScore / 100)}
+                              className={cn(
+                                "transition-all duration-1000",
+                                atsResult.overallScore >= 80 ? "text-emerald-400" : atsResult.overallScore >= 60 ? "text-amber-400" : "text-rose-400"
+                              )} 
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                             <span className="text-3xl font-display font-bold text-white">{atsResult.overallScore}</span>
+                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Match</span>
+                          </div>
+                       </div>
+                    </div>
+                    
+                    <div className="glass-card p-6 col-span-2 space-y-4">
+                       <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Breakdown</h4>
+                       {Object.entries(atsResult.breakdown).map(([label, score]: any) => (
+                         <div key={label} className="space-y-1.5">
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+                               <span className="text-slate-400">{label}</span>
+                               <span className="text-white">{score}%</span>
+                            </div>
+                            <div className="h-1.5 bg-surface-dark rounded-full overflow-hidden">
+                               <div className="h-full bg-brand-primary" style={{ width: `${score}%` }} />
+                            </div>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
 
-                 {/* Experience */}
-                 <section className="space-y-4">
-                    <h4 className="text-xs font-bold text-brand-primary uppercase tracking-[0.2em]">Professional Experience</h4>
-                    <div className="space-y-6">
-                       {generatedResume.experience.map((exp: any, i: number) => (
-                          <div key={i} className="relative pl-6 border-l border-border-dark">
-                             <div className="absolute top-1.5 -left-1.5 w-3 h-3 rounded-full bg-brand-primary border-4 border-bg-dark" />
-                             <div className="flex justify-between items-start mb-2">
-                                <div>
-                                   <h5 className="text-sm font-bold text-white">{exp.title}</h5>
-                                   <p className="text-xs text-slate-400">{exp.company}</p>
-                                </div>
-                                <span className="text-[10px] font-mono text-slate-500">{exp.duration}</span>
-                             </div>
-                             <ul className="space-y-1.5">
-                                {exp.highlights.map((h: string, j: number) => (
-                                   <li key={j} className="text-xs text-slate-300 flex items-start gap-2">
-                                      <span className="text-brand-primary mt-1">•</span>
-                                      {h}
-                                   </li>
-                                ))}
-                             </ul>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="glass-card p-5 border-rose-500/10 bg-rose-500/5">
+                       <h4 className="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <AlertCircle className="w-3.5 h-3.5" /> Issues
+                       </h4>
+                       <ul className="space-y-2">
+                          {atsResult.issues.map((issue: string, i: number) => (
+                            <li key={i} className="text-xs text-slate-300 flex items-start gap-3">
+                               <div className="w-1 h-1 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+                               {issue}
+                            </li>
+                          ))}
+                       </ul>
+                    </div>
+                    <div className="glass-card p-5 border-emerald-500/10 bg-emerald-500/5">
+                       <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Sparkles className="w-3.5 h-3.5" /> Suggestions
+                       </h4>
+                       <ul className="space-y-2">
+                          {atsResult.suggestions.map((suggestion: string, i: number) => (
+                            <li key={i} className="text-xs text-slate-300 flex items-start gap-3">
+                               <div className="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                               {suggestion}
+                            </li>
+                          ))}
+                       </ul>
+                    </div>
+                  </div>
+
+                  <div className="glass-card p-6">
+                    <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Keyword Analysis</h4>
+                    <div className="flex flex-wrap gap-2">
+                       {atsResult.keywordAnalysis.map((kw: any, i: number) => (
+                          <div 
+                            key={i}
+                            className={cn(
+                              "px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 border transition-all",
+                              kw.found 
+                                ? "bg-emerald-400/10 border-emerald-400/20 text-emerald-400" 
+                                : "bg-rose-400/10 border-rose-400/20 text-rose-400"
+                            )}
+                          >
+                            {kw.found ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                            {kw.skill}
+                            <span className="text-[8px] font-bold uppercase opacity-50">{kw.importance}</span>
                           </div>
                        ))}
                     </div>
-                 </section>
+                  </div>
+               </motion.div>
+             ) : (
+               <motion.div
+                key="preview-content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-6"
+               >
+                  <div className="glass-card p-8">
+                     <div className="flex items-center justify-between mb-10">
+                        <div className="flex items-center gap-4">
+                           <div className="w-16 h-16 rounded-2xl bg-surface-dark flex items-center justify-center font-bold text-2xl text-brand-primary ring-1 ring-border-dark">
+                              {selectedResume.name[0]}
+                           </div>
+                           <div>
+                              <h2 className="text-xl font-display font-bold text-white mb-1">{selectedResume.name}</h2>
+                              <p className="text-xs text-slate-500">v{selectedResume.version} • Updated {selectedResume.date}</p>
+                           </div>
+                        </div>
+                        <div className="flex gap-2">
+                           <button className="p-2.5 rounded-xl bg-surface-dark border border-border-dark text-slate-400 hover:text-white transition-all cursor-pointer"><Download className="w-4 h-4" /></button>
+                           <button className="p-2.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                     </div>
 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Skills */}
-                    <section className="space-y-3">
-                       <h4 className="text-xs font-bold text-brand-primary uppercase tracking-[0.2em]">Technical Skills</h4>
-                       <div className="space-y-3">
-                          {generatedResume.skills.map((cat: any, i: number) => (
-                             <div key={i}>
-                                <p className="text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{cat.category}</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                   {cat.items.map((skill: string, j: number) => (
-                                      <span key={j} className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-slate-300">{skill}</span>
-                                   ))}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">Strengths</h3>
+                           <div className="space-y-3">
+                              {analysisResult?.strengths?.map((s: string, i: number) => (
+                                <div key={i} className="flex items-center gap-3 text-xs text-slate-300 p-3 rounded-xl bg-white/5 border border-white/5">
+                                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                   {s}
                                 </div>
-                             </div>
-                          ))}
-                       </div>
-                    </section>
-
-                    {/* Education */}
-                    <section className="space-y-3">
-                       <h4 className="text-xs font-bold text-brand-primary uppercase tracking-[0.2em]">Education</h4>
-                       <div className="space-y-4">
-                          {generatedResume.education.map((edu: any, i: number) => (
-                             <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5">
-                                <h5 className="text-xs font-bold text-white">{edu.degree}</h5>
-                                <p className="text-[10px] text-slate-400">{edu.institution} • {edu.year}</p>
-                                {edu.details && <p className="text-[10px] text-slate-500 mt-1">{edu.details}</p>}
-                             </div>
-                          ))}
-                       </div>
-                    </section>
-                 </div>
-              </div>
-            </motion.div>
-          )}
+                              ))}
+                           </div>
+                        </div>
+                        <div className="space-y-6">
+                           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">Opportunities</h3>
+                           <div className="space-y-3">
+                              {analysisResult?.improvements?.map((s: string, i: number) => (
+                                <div key={i} className="flex items-center gap-3 text-xs text-slate-300 p-3 rounded-xl bg-white/5 border border-white/5">
+                                   <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                   {s}
+                                </div>
+                              ))}
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </motion.div>
+             )}
+           </AnimatePresence>
         </div>
       </div>
     </div>

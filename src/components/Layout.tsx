@@ -7,15 +7,18 @@ import {
   CheckSquare, 
   FileText, 
   BarChart3, 
+  BarChart3, 
   Settings,
   Plus,
   Search,
   Bell,
   LogOut,
-  LogOut,
   User,
   PenTool,
-  Target
+  Target,
+  Compass,
+  Users,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,14 +30,23 @@ import { useEffect, useState } from 'react';
 
 const navItems = [
   { id: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: '/discovery', label: 'Job Discovery', icon: Compass },
   { id: '/applications', label: 'Applications', icon: Briefcase },
   { id: '/saved', label: 'Saved Jobs', icon: Bookmark },
   { id: '/interviews', label: 'Interviews', icon: Calendar },
   { id: '/tasks', label: 'Tasks', icon: CheckSquare },
+];
+
+const aiItems = [
   { id: '/resume', label: 'Resume/CV', icon: FileText },
   { id: '/cover-letter', label: 'Cover Letter', icon: PenTool },
   { id: '/skills-gap', label: 'Skills Gap', icon: Target },
   { id: '/insights', label: 'Insights', icon: BarChart3 },
+];
+
+const communityItems = [
+  { id: '/mentors', label: 'Mentors', icon: Users },
+  { id: '/reviews', label: 'Reviews', icon: MessageSquare },
 ];
 
 export function Sidebar() {
@@ -61,24 +73,69 @@ export function Sidebar() {
         <img src="/applyji-logo.svg" alt="ApplyJi" className="h-10 w-auto object-contain" />
       </div>
 
-      <nav className="flex-1 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.id}
-            to={item.id}
-            className={({ isActive }) => cn(
-              isActive ? 'nav-item-active' : 'nav-item',
-              'w-full cursor-pointer'
-            )}
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
-                <span>{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+      <nav className="flex-1 space-y-8 overflow-y-auto pr-2 scrollbar-hide">
+        <div className="space-y-1">
+          <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Core</p>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.id}
+              to={item.id}
+              className={({ isActive }) => cn(
+                isActive ? 'nav-item-active' : 'nav-item',
+                'w-full cursor-pointer'
+              )}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
+                  <span>{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="space-y-1">
+          <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">AI Intelligence</p>
+          {aiItems.map((item) => (
+            <NavLink
+              key={item.id}
+              to={item.id}
+              className={({ isActive }) => cn(
+                isActive ? 'nav-item-active' : 'nav-item',
+                'w-full cursor-pointer'
+              )}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
+                  <span>{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="space-y-1">
+          <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Community</p>
+          {communityItems.map((item) => (
+            <NavLink
+              key={item.id}
+              to={item.id}
+              className={({ isActive }) => cn(
+                isActive ? 'nav-item-active' : 'nav-item',
+                'w-full cursor-pointer'
+              )}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
+                  <span>{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </nav>
 
       <div className="pt-4 mt-4 border-t border-zinc-800 space-y-1">
@@ -125,6 +182,33 @@ export function Sidebar() {
 }
 
 export function Navbar({ onSearchClick, onAddClick }: { onSearchClick: () => void; onAddClick?: () => void }) {
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (data) setNotifications(data);
+  };
+
+  const markAsRead = async (id: string) => {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
   return (
     <header className="h-16 border-b border-border-dark flex items-center justify-between px-8 bg-bg-dark z-40">
       <div className="relative w-96">
@@ -137,11 +221,64 @@ export function Navbar({ onSearchClick, onAddClick }: { onSearchClick: () => voi
         </button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all relative cursor-pointer">
+      <div className="flex items-center gap-4 relative">
+        <button 
+          onClick={() => setShowNotifications(!showNotifications)}
+          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all relative cursor-pointer"
+        >
           <Bell className="w-5 h-5" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-brand-primary rounded-full ring-2 ring-bg-dark"></span>
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-brand-primary text-[10px] font-bold text-white rounded-full ring-2 ring-bg-dark flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
         </button>
+
+        <AnimatePresence>
+          {showNotifications && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-full right-0 mt-2 w-80 glass-card bg-surface-dark border-border-dark shadow-2xl z-50 overflow-hidden"
+              >
+                <div className="p-4 border-b border-border-dark flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-widest">Notifications</h4>
+                  <button className="text-[10px] text-slate-500 hover:text-brand-primary transition-colors">Mark all as read</button>
+                </div>
+                <div className="max-h-[350px] overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map((n) => (
+                      <div 
+                        key={n.id} 
+                        onClick={() => markAsRead(n.id)}
+                        className={cn(
+                          "p-4 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer relative",
+                          !n.is_read && "bg-brand-primary/5"
+                        )}
+                      >
+                        {!n.is_read && <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-brand-primary rounded-full" />}
+                        <p className="text-[11px] font-bold text-white mb-0.5">{n.title}</p>
+                        <p className="text-[10px] text-slate-400 leading-relaxed mb-2">{n.message}</p>
+                        <span className="text-[9px] text-slate-600 font-mono">{new Date(n.created_at).toLocaleString()}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Bell className="w-8 h-8 text-slate-700 mx-auto mb-2 opacity-20" />
+                      <p className="text-[10px] text-slate-500 font-medium">No notifications yet</p>
+                    </div>
+                  )}
+                </div>
+                <div className="p-3 bg-bg-dark/50 text-center">
+                  <button className="text-[10px] font-bold text-brand-primary hover:underline">View All Notifications</button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
         
         <button 
           onClick={onAddClick}

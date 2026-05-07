@@ -13,9 +13,12 @@ import { Tasks } from './pages/Tasks';
 import { Resume } from './pages/Resume';
 import { CoverLetter } from './pages/CoverLetter';
 import { SkillsGap } from './pages/SkillsGap';
+import { JobDiscovery } from './pages/JobDiscovery';
 import { Insights } from './pages/Insights';
 import { Settings } from './pages/Settings';
 import { Billing } from './pages/Billing';
+import { Mentors } from './pages/Mentors';
+import { CompanyReviews } from './pages/CompanyReviews';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search } from 'lucide-react';
 
@@ -225,6 +228,9 @@ export default function App() {
         <Route path="/cover-letter" element={<ProtectedRoute><AppLayout><CoverLetter /></AppLayout></ProtectedRoute>} />
         <Route path="/skills-gap" element={<ProtectedRoute><AppLayout><SkillsGap /></AppLayout></ProtectedRoute>} />
         <Route path="/insights" element={<ProtectedRoute><AppLayout><Insights /></AppLayout></ProtectedRoute>} />
+        <Route path="/discovery" element={<ProtectedRoute><AppLayout><JobDiscovery /></AppLayout></ProtectedRoute>} />
+        <Route path="/mentors" element={<ProtectedRoute><AppLayout><Mentors /></AppLayout></ProtectedRoute>} />
+        <Route path="/reviews" element={<ProtectedRoute><AppLayout><CompanyReviews /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><AppLayout><Billing /></AppLayout></ProtectedRoute>} />
 
