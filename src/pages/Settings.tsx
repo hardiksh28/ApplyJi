@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   User, 
   Mail, 
@@ -24,6 +25,7 @@ import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase/client';
 import { signOut } from '../lib/auth-service';
 import { LoadingSpinner } from '../components/CommonUI';
+import { useToast } from '../components/ui/toast';
 import { motion } from 'motion/react';
 
 export function Settings() {
@@ -45,12 +47,45 @@ export function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [completeness, setCompleteness] = useState<{score: number, missingFields: string[]}>({score: 0, missingFields: []});
   const [referralStats, setReferralStats] = useState<any>(null);
+  const [gmailLoading, setGmailLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchProfile();
     fetchCompleteness();
     fetchReferralStats();
   }, []);
+
+  // Handle Gmail OAuth redirect query params
+  useEffect(() => {
+    const gmailParam = searchParams.get('gmail');
+    const reason = searchParams.get('reason');
+    if (gmailParam === 'connected') {
+      showToast({
+        type: 'gmail',
+        title: 'Gmail connected!',
+        message: 'Your applications will now sync automatically.',
+      });
+      setSearchParams({}, { replace: true });
+      fetchProfile(); // Refresh profile to show connected state
+    } else if (gmailParam === 'error') {
+      const messages: Record<string, string> = {
+        missing_params: 'Missing parameters from Google. Please try again.',
+        invalid_state: 'Invalid session state. Please try again.',
+        auth_failed: 'Authentication expired. Please try connecting again.',
+        no_refresh_token: 'Google did not provide offline access. Please revoke ApplyJi in your Google account settings and try again.',
+        save_failed: 'Failed to save your connection. Please try again.',
+        unknown: 'An unexpected error occurred. Please try again.',
+      };
+      showToast({
+        type: 'error',
+        title: 'Gmail connection failed',
+        message: messages[reason || 'unknown'] || messages.unknown,
+      });
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, showToast]);
 
   const fetchReferralStats = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -135,12 +170,67 @@ export function Settings() {
     }
   };
 
-  const toggleEmailSync = async () => {
-    const newVal = !profile?.email_sync_enabled;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await supabase.from('profiles').update({ email_sync_enabled: newVal }).eq('id', session.user.id);
-      setProfile({ ...profile, email_sync_enabled: newVal });
+  const handleConnectGmail = async () => {
+    setGmailLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showToast({ type: 'error', title: 'Please log in first' });
+        return;
+      }
+
+      const response = await fetch('/api/auth/google/connect', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get Google OAuth URL');
+      }
+
+      const { url } = await response.json();
+      // Redirect to Google OAuth
+      window.location.href = url;
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Failed to connect Gmail',
+        message: err.message || 'Please try again.',
+      });
+      setGmailLoading(false);
+    }
+  };
+
+  const handleDisconnectGmail = async () => {
+    if (!window.confirm('Are you sure you want to disconnect Gmail? Your synced applications will remain but new emails won\'t be processed.')) {
+      return;
+    }
+
+    setGmailLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/auth/google/disconnect', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+
+      if (!response.ok) throw new Error('Failed to disconnect');
+
+      setProfile({ ...profile, google_refresh_token: null, gmail_connected_at: null });
+      showToast({
+        type: 'info',
+        title: 'Gmail disconnected',
+        message: 'Your synced applications are still available.',
+      });
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Failed to disconnect Gmail',
+        message: err.message,
+      });
+    } finally {
+      setGmailLoading(false);
     }
   };
 
@@ -468,9 +558,66 @@ export function Settings() {
               <Shield className="w-4 h-4" />
               Integrations
            </h3>
+
+           {/* Gmail Integration — Primary CTA */}
+           <div className="p-5 rounded-xl border border-border-dark bg-bg-dark/30 hover:border-slate-700 transition-all">
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "p-2.5 rounded-xl transition-transform",
+                      profile?.google_refresh_token ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"
+                    )}>
+                      <Mail className="w-6 h-6" />
+                    </div>
+                    <div>
+                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                         Gmail
+                         {profile?.google_refresh_token && (
+                           <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                             Connected ✓
+                           </span>
+                         )}
+                       </h4>
+                       <p className="text-[10px] text-slate-500">
+                         {profile?.google_refresh_token 
+                           ? `Connected ${profile.gmail_connected_at ? `on ${new Date(profile.gmail_connected_at).toLocaleDateString()}` : ''}`
+                           : 'Parse job confirmation emails automatically'}
+                       </p>
+                    </div>
+                 </div>
+                 {profile?.google_refresh_token ? (
+                   <button 
+                     onClick={handleDisconnectGmail}
+                     disabled={gmailLoading}
+                     className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-border-dark text-slate-400 hover:border-rose-500/50 hover:text-rose-400 transition-all cursor-pointer whitespace-nowrap"
+                   >
+                     {gmailLoading ? 'Disconnecting...' : 'Disconnect'}
+                   </button>
+                 ) : (
+                   <button 
+                     onClick={handleConnectGmail}
+                     disabled={gmailLoading}
+                     className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
+                   >
+                     {gmailLoading ? (
+                       <Loader2 className="w-3 h-3 animate-spin" />
+                     ) : (
+                       <Mail className="w-3 h-3" />
+                     )}
+                     {gmailLoading ? 'Connecting...' : 'Connect Gmail'}
+                   </button>
+                 )}
+              </div>
+              {!profile?.google_refresh_token && (
+                <p className="text-[10px] text-slate-600 mt-3 ml-14">
+                  Requires Pro plan • Read-only access to your emails • We only look for job application confirmations
+                </p>
+              )}
+           </div>
+
+           {/* Other Integrations */}
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { name: 'Gmail', icon: Mail, desc: 'Parse job emails automatically', connected: profile.email_sync_enabled, action: toggleEmailSync },
                 { name: 'LinkedIn', icon: Linkedin, desc: 'Sync applications from jobs page (Coming Soon)', connected: false, action: () => alert('Coming soon!') },
                 { name: 'GitHub', icon: Github, desc: 'Import project repositories (Coming Soon)', connected: false, action: () => alert('Coming soon!') },
                 { name: 'Slack', icon: MessageCircle, desc: 'Get interview reminders (Coming Soon)', connected: false, action: () => alert('Coming soon!') },

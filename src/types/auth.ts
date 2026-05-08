@@ -9,6 +9,7 @@ export interface UserProfile {
   subscription_tier: 'free' | 'pro' | 'enterprise'
   trial_ends_at: string | null
   google_refresh_token: string | null
+  gmail_connected_at: string | null
   stripe_customer_id: string | null
   is_admin: boolean
   skills: string[]

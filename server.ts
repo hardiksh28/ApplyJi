@@ -61,6 +61,120 @@ async function startServer() {
     res.json({ status: 'ok', service: 'ApplyJi API' });
   });
 
+  // ============ GOOGLE OAUTH ROUTES ============
+
+  // Generate Google OAuth URL for connecting Gmail
+  app!.get('/api/auth/google/connect', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { google } = await import('googleapis');
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+
+      // Encode the user's JWT in the state so we know who to associate after redirect
+      const state = Buffer.from(JSON.stringify({
+        userId: req.user!.id,
+        token: req.headers.authorization?.split(' ')[1],
+      })).toString('base64url');
+
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: [
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/userinfo.email',
+        ],
+        state,
+      });
+
+      res.json({ url: authUrl });
+    } catch (err: any) {
+      console.error('Google connect error:', err);
+      res.status(500).json({ error: 'Failed to generate Google OAuth URL' });
+    }
+  });
+
+  // Google OAuth callback — exchanges code for tokens, stores refresh_token
+  app!.get('/api/auth/google/callback', async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code || !state) {
+        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=missing_params`);
+      }
+
+      // Decode user info from state
+      let stateData: { userId: string; token: string };
+      try {
+        stateData = JSON.parse(Buffer.from(state as string, 'base64url').toString());
+      } catch {
+        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=invalid_state`);
+      }
+
+      // Verify the user's token is still valid
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(stateData.token);
+      if (authError || !user || user.id !== stateData.userId) {
+        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=auth_failed`);
+      }
+
+      // Exchange authorization code for tokens
+      const { google } = await import('googleapis');
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+
+      const { tokens } = await oauth2Client.getToken(code as string);
+
+      if (!tokens.refresh_token) {
+        console.warn('No refresh_token received from Google. User may need to revoke access and reconnect.');
+        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=no_refresh_token`);
+      }
+
+      // Save refresh_token to the user's profile
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          google_refresh_token: tokens.refresh_token,
+          gmail_connected_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Failed to save Google refresh token:', updateError);
+        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=save_failed`);
+      }
+
+      console.log(`✅ Gmail connected for user ${user.id}`);
+      res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/dashboard?gmail=connected`);
+    } catch (err: any) {
+      console.error('Google callback error:', err);
+      res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=unknown`);
+    }
+  });
+
+  // Disconnect Google/Gmail
+  app!.post('/api/auth/google/disconnect', authenticate, async (req: AuthRequest, res) => {
+    try {
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          google_refresh_token: null,
+          gmail_connected_at: null,
+        })
+        .eq('id', req.user!.id);
+
+      if (error) throw error;
+
+      res.json({ success: true, message: 'Gmail disconnected successfully' });
+    } catch (err: any) {
+      console.error('Google disconnect error:', err);
+      res.status(500).json({ error: 'Failed to disconnect Gmail' });
+    }
+  });
+
 
 
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -9,7 +10,8 @@ import {
   Calendar as CalendarIcon,
   Zap,
   RefreshCcw,
-  PlusCircle
+  PlusCircle,
+  Mail
 } from 'lucide-react';
 import { LoadingSpinner, EmptyState } from '../components/CommonUI';
 import { 
@@ -25,13 +27,14 @@ import {
 import { ErrorState } from '../components/CommonUI';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase/client';
+import { useGmailSync } from '../lib/useGmailSync';
+import { useToast } from '../components/ui/toast';
+import { motion, AnimatePresence } from 'motion/react';
 
 export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
   const [profile, setProfile] = useState<any>(null);
   const [applications, setApplications] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,12 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
     { label: 'Offers', value: '0', trend: '0', isUp: null },
     { label: 'Response Rate', value: '0%', trend: '0%', isUp: false },
   ]);
+  const [newAppIds, setNewAppIds] = useState<Set<string>>(new Set());
+
+  const { syncGmail, syncing, syncProgress } = useGmailSync();
+  const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoSyncRan = useRef(false);
 
   const fetchDashboardData = async () => {
     setError(null);
@@ -120,42 +129,104 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
     fetchDashboardData();
   }, []);
 
+  // Handle ?gmail=connected query param (from OAuth callback redirect)
+  useEffect(() => {
+    if (searchParams.get('gmail') === 'connected') {
+      showToast({
+        type: 'gmail',
+        title: 'Gmail connected!',
+        message: 'Your applications will now sync automatically.',
+      });
+      // Clean up the URL
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, showToast]);
+
+  // Auto-sync on login
+  useEffect(() => {
+    if (!profile || autoSyncRan.current) return;
+    if (sessionStorage.getItem('gmail_synced_this_session')) return;
+    if (!profile.google_refresh_token) return;
+
+    autoSyncRan.current = true;
+    sessionStorage.setItem('gmail_synced_this_session', 'true');
+
+    // Silent background sync — no loading UI
+    const prevAppIds = new Set(applications.map(a => a.id));
+    
+    syncGmail().then(async (result) => {
+      if (result.success && result.data && result.data.applicationsFound > 0) {
+        // Refresh data and highlight new items
+        await fetchDashboardData();
+        showToast({
+          type: 'success',
+          title: `✓ ${result.data.applicationsFound} new application${result.data.applicationsFound > 1 ? 's' : ''} synced from Gmail`,
+        });
+      }
+      // If 0 found or error, do nothing silently
+    });
+  }, [profile]);
+
+  const handleSync = async () => {
+    if (!profile?.google_refresh_token) {
+      showToast({
+        type: 'error',
+        title: 'Gmail not connected',
+        message: 'Connect your Gmail first in Settings to sync applications.',
+        action: {
+          label: 'Go to Settings',
+          onClick: () => { window.location.href = '/settings'; },
+        },
+      });
+      return;
+    }
+
+    const prevIds = new Set(applications.map(a => a.id));
+    const result = await syncGmail();
+
+    if (result.success) {
+      await fetchDashboardData();
+      
+      showToast({
+        type: 'success',
+        title: `Sync complete! ${result.data?.applicationsFound || 0} new application${(result.data?.applicationsFound || 0) !== 1 ? 's' : ''} found.`,
+      });
+    } else {
+      const errData = result.error;
+      if (errData?.code === 'PRO_REQUIRED') {
+        showToast({
+          type: 'error',
+          title: 'Gmail sync requires Pro plan',
+          message: 'Upgrade to Pro for unlimited Gmail sync.',
+          action: {
+            label: 'Upgrade Now',
+            onClick: () => { window.location.href = '/billing'; },
+          },
+        });
+      } else if (errData?.error?.includes('not connected') || errData?.error?.includes('refresh token')) {
+        showToast({
+          type: 'error',
+          title: 'Gmail not connected',
+          message: 'Connect your Gmail first in Settings.',
+          action: {
+            label: 'Go to Settings',
+            onClick: () => { window.location.href = '/settings'; },
+          },
+        });
+      } else {
+        showToast({
+          type: 'error',
+          title: 'Sync failed',
+          message: errData?.error || 'An unexpected error occurred.',
+        });
+      }
+    }
+  };
+
   const toggleTask = async (task: any) => {
     const { error } = await supabase.from('tasks').update({ completed: !task.completed }).eq('id', task.id);
     if (!error) {
       setTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !task.completed } : t));
-    }
-  };
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncProgress(0);
-
-    const progressInterval = setInterval(() => {
-      setSyncProgress(prev => (prev >= 90 ? prev : prev + 10));
-    }, 800);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/sync/gmail', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`
-        }
-      });
-      if (!response.ok) throw new Error('Sync failed');
-      
-      setSyncProgress(100);
-      await fetchDashboardData();
-    } catch (error: any) {
-      console.error('Sync failed:', error);
-      alert('Sync failed: ' + (error.message || 'Unknown error'));
-    } finally {
-      clearInterval(progressInterval);
-      setTimeout(() => {
-        setSyncing(false);
-        setSyncProgress(0);
-      }, 500);
     }
   };
 
@@ -194,7 +265,7 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="relative overflow-hidden flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+            className="relative overflow-hidden flex items-center gap-2 px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 cursor-pointer group"
           >
             {syncing && (
               <div 
@@ -202,8 +273,11 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
                 style={{ width: `${syncProgress}%` }}
               />
             )}
-            <RefreshCcw className={cn("w-4 h-4", syncing && "animate-spin")} />
+            <RefreshCcw className={cn("w-4 h-4 transition-transform", syncing ? "animate-spin" : "group-hover:rotate-45")} />
             <span>{syncing ? `Syncing... ${syncProgress}%` : 'Sync Gmail'}</span>
+            {!profile?.google_refresh_token && (
+              <span className="ml-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Gmail not connected" />
+            )}
           </button>
           <button 
             onClick={onAddClick}
@@ -311,8 +385,15 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
             <button className="text-sm text-brand-primary hover:text-brand-secondary font-medium transition-colors cursor-pointer">View All</button>
           </div>
           <div className="space-y-4">
-            {applications.length > 0 ? applications.slice(0, 4).map((app) => (
-              <div key={app!.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group cursor-pointer border border-transparent hover:border-border-dark">
+            <AnimatePresence mode="popLayout">
+              {applications.length > 0 ? applications.slice(0, 4).map((app, idx) => (
+                <motion.div
+                  key={app!.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.3 }}
+                  className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group cursor-pointer border border-transparent hover:border-border-dark"
+                >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-surface-dark flex items-center justify-center text-white font-bold border border-border-dark group-hover:border-brand-primary/50 transition-colors uppercase">
                     {app!.company_name ? app!.company_name[0] : '?'}
@@ -336,15 +417,16 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-            )) : (
-              <EmptyState 
-                title="No applications yet" 
-                message="Sync your Gmail or add your first application manually to start tracking."
-                actionLabel="Add Application"
-                onAction={onAddClick}
-              />
-            )}
+                </motion.div>
+              )) : (
+                <EmptyState 
+                  title="No applications yet" 
+                  message="Sync your Gmail or add your first application manually to start tracking."
+                  actionLabel="Add Application"
+                  onAction={onAddClick}
+                />
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
