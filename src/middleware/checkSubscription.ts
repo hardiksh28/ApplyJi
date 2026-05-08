@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { getSupabaseAdmin } from '../lib/supabase/server.ts';
-import { AuthRequest } from './authenticate';
+import type { AuthRequest } from './authenticate';
 
 export const loadProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });

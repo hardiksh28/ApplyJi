@@ -1,5 +1,6 @@
 import express, { Router, Response } from 'express';
-import { authenticate, AuthRequest } from '../middleware/authenticate';
+import { authenticate } from '../middleware/authenticate';
+import type { AuthRequest } from '../middleware/authenticate';
 import { loadProfile } from '../middleware/checkSubscription';
 import { getSupabaseAdmin } from '../lib/supabase/server.ts';
 import { z } from 'zod';

@@ -4,7 +4,7 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY 
 });
 
-const MODEL_NAME = "gemini-3-flash-preview";
+const MODEL_NAME = "gemini-2.5-flash-lite";
 
 // ============ RETRY LOGIC ============
 
@@ -125,7 +125,7 @@ export async function checkATSScore(
     });
 
     try {
-      return JSON.parse(response.text);
+      return JSON.parse(response.text || '');
     } catch (error) {
       console.error("Failed to parse ATS score response:", error);
       throw new Error("Failed to check ATS score");
@@ -205,7 +205,7 @@ export async function parseJobEmail(emailBody: string) {
     });
 
     try {
-      return JSON.parse(response.text);
+      return JSON.parse(response.text || '');
     } catch (error) {
       console.error("Failed to parse Gemini response:", error);
       return { isJobApplication: false };
@@ -279,7 +279,7 @@ export async function analyzeResume(resumeText: string, jobDescription: string) 
     });
 
     try {
-      return JSON.parse(response.text);
+      return JSON.parse(response.text || '');
     } catch (error) {
       console.error("Failed to parse Gemini response:", error);
       throw new Error("Failed to analyze resume");
@@ -378,7 +378,7 @@ Generate a tailored resume optimized for this specific role. Emphasize matching 
     });
 
     try {
-      return JSON.parse(response.text);
+      return JSON.parse(response.text || '');
     } catch (error) {
       console.error("Failed to parse tailored resume response:", error);
       throw new Error("Failed to generate tailored resume");
@@ -500,7 +500,7 @@ Compare the candidate's skills against the job requirements. Identify matched sk
     });
 
     try {
-      return JSON.parse(response.text);
+      return JSON.parse(response.text || '');
     } catch (error) {
       console.error("Failed to parse skills gap response:", error);
       throw new Error("Failed to analyze skills gap");

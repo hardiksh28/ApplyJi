@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, Copy, Check, Wand2 } from 'lucide-react';
 import { generateFollowUp } from '../lib/ai/gemini';
@@ -16,7 +17,7 @@ export function FollowUpComposer({ company, jobTitle }: FollowUpComposerProps) {
     setGenerating(true);
     try {
       const content = await generateFollowUp({ company, jobTitle });
-      setDraft(content);
+      setDraft(content || '');
     } catch (err) {
       console.error('Failed to generate follow-up:', err);
     } finally {

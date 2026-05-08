@@ -1,3 +1,4 @@
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, Building2, MapPin, Calendar, ExternalLink, Activity } from 'lucide-react';

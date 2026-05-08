@@ -102,12 +102,12 @@ async function startServer() {
       });
       
       // Filter for application keywords
-      const query = 'newer_than:30d ("thank you for applying" OR "application received" OR "application for" OR "position at")';
+      const query = 'newer_than:10d ("thank you for applying" OR "application received" OR "application for" OR "position at")';
       const messages = await fetchEmails(gmail, query);
 
       const results = [];
-      // Processing only the first 2 emails per sync to stay within Gemini Free Tier rate limits (5 RPM)
-      for (const msg of messages.slice(0, 2)) {
+      // Processing up to 50 emails per sync
+      for (const msg of messages.slice(0, 50)) {
         // Check if we already processed this thread
         const { data: existing } = await supabaseAdmin
           .from('application_activities')
