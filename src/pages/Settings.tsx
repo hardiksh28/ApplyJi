@@ -179,17 +179,8 @@ export function Settings() {
         return;
       }
 
-      const response = await fetch('/api/auth/google/connect', {
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get Google OAuth URL');
-      }
-
-      const { url } = await response.json();
-      // Redirect to Google OAuth
-      window.location.href = url;
+      // Direct redirect with token
+      window.location.href = `/api/auth/google?token=${session.access_token}`;
     } catch (err: any) {
       showToast({
         type: 'error',
@@ -241,11 +232,24 @@ export function Settings() {
     const { data: apps } = await supabase.from('applications').select('*').eq('user_id', session.user.id);
     if (!apps) return;
 
-    const blob = new Blob([JSON.stringify(apps, null, 2)], { type: 'application/json' });
+    // Convert to CSV
+    const headers = ['Company', 'Role', 'Status', 'Salary', 'Location', 'Applied Date'];
+    const rows = apps.map(app => [
+      `"${app.company_name || ''}"`,
+      `"${app.job_title || ''}"`,
+      `"${app.status || ''}"`,
+      `"${app.salary_range || ''}"`,
+      `"${app.location || ''}"`,
+      `"${app.created_at ? new Date(app.created_at).toLocaleDateString() : ''}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `applyji-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `applyji-applications-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -653,7 +657,7 @@ export function Settings() {
               <div className="flex items-center justify-between">
                  <div>
                     <h4 className="text-sm font-bold text-white mb-1">Export Data</h4>
-                    <p className="text-xs text-slate-400">Download all your applications as JSON</p>
+                    <p className="text-xs text-slate-400">Download all your applications as CSV</p>
                  </div>
                  <button onClick={handleExportData} className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-pointer">
                     <Download className="w-4 h-4" />

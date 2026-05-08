@@ -61,11 +61,19 @@ async function startServer() {
     res.json({ status: 'ok', service: 'ApplyJi API' });
   });
 
-  // ============ GOOGLE OAUTH ROUTES ============
-
   // Generate Google OAuth URL for connecting Gmail
-  app!.get('/api/auth/google/connect', authenticate, async (req: AuthRequest, res) => {
+  app!.get('/api/auth/google', async (req, res) => {
     try {
+      const token = (req.query.token as string) || req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(401).json({ error: 'Unauthorized: No token provided' });
+      }
+
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !user) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+      }
+
       const { google } = await import('googleapis');
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
@@ -75,21 +83,23 @@ async function startServer() {
 
       // Encode the user's JWT in the state so we know who to associate after redirect
       const state = Buffer.from(JSON.stringify({
-        userId: req.user!.id,
-        token: req.headers.authorization?.split(' ')[1],
+        userId: user.id,
+        token: token,
       })).toString('base64url');
 
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
         scope: [
+          'openid',
+          'email',
+          'profile',
           'https://www.googleapis.com/auth/gmail.readonly',
-          'https://www.googleapis.com/auth/userinfo.email',
         ],
         state,
       });
 
-      res.json({ url: authUrl });
+      res.redirect(authUrl);
     } catch (err: any) {
       console.error('Google connect error:', err);
       res.status(500).json({ error: 'Failed to generate Google OAuth URL' });
@@ -216,12 +226,12 @@ async function startServer() {
       });
       
       // Filter for application keywords
-      const query = 'newer_than:10d ("thank you for applying" OR "application received" OR "application for" OR "position at")';
+      const query = 'newer_than:30d ("thank you for applying" OR "application received" OR "application for" OR "position at" OR "successfully applied" OR "आपका आवेदन" OR "internshala" OR "naukri" OR "unstop" OR "wellfound")';
       const messages = await fetchEmails(gmail, query);
 
       const results = [];
-      // Processing up to 50 emails per sync
-      for (const msg of messages.slice(0, 50)) {
+      // Processing up to 20 emails per sync
+      for (const msg of messages.slice(0, 20)) {
         // Check if we already processed this thread
         const { data: existing } = await supabaseAdmin
           .from('application_activities')
@@ -423,9 +433,13 @@ async function startServer() {
       if (maxPrice) query = query.lte('price_per_hour', maxPrice);
 
       const { data, error } = await query.order('rating', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching mentors (falling back to empty list):', error.message);
+        return res.json([]);
+      }
       res.json(data);
     } catch (err: any) {
+      console.error('Unexpected error in /api/mentors:', err);
       res.status(500).json({ error: err.message });
     }
   });

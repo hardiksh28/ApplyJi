@@ -67,3 +67,47 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
+
+export function ProRoute({ children }: ProtectedRouteProps) {
+  const [loading, setLoading] = React.useState(true);
+  const [profile, setProfile] = React.useState<any>(null);
+  const location = useLocation();
+
+  React.useEffect(() => {
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      setProfile(profile);
+      setLoading(false);
+    }
+
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  const isPro = profile?.subscription_tier === 'pro';
+
+  if (!isPro) {
+    return <Navigate to="/billing" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle, Zap, Shield, ArrowLeft, Loader2, AlertCircle, IndianRupee } from 'lucide-react';
+import { CheckCircle, Zap, Shield, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { cn } from '../lib/utils';
-import { LoadingSpinner, ErrorState } from '../components/CommonUI';
+import { LoadingSpinner } from '../components/CommonUI';
 
-
+const MONTHLY_DISPLAY = '$9.99';
+const YEARLY_DISPLAY = '$101.90';
 
 export function Billing() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ export function Billing() {
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [interval, setInterval] = useState<'month' | 'year'>('month');
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export function Billing() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ interval, currency: 'inr' }),
+        body: JSON.stringify({ interval }),
       });
 
       if (!response.ok) {
@@ -78,7 +78,30 @@ export function Billing() {
     }
   };
 
+  const handleManageBilling = async () => {
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/stripe/portal', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+
+      if (!response.ok) throw new Error('Failed to create portal session');
+
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (pageLoading) return <LoadingSpinner fullPage />;
+
+  const isPro = profile?.subscription_tier === 'pro';
 
   return (
     <div className="max-w-5xl mx-auto space-y-12 py-10">
@@ -90,24 +113,6 @@ export function Billing() {
         Back
       </button>
 
-      {/* Payment Success Banner */}
-      {paymentSuccess && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-4"
-        >
-          <div className="p-2 bg-emerald-500/20 rounded-full">
-            <CheckCircle className="w-6 h-6 text-emerald-400" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">Welcome to ApplyJi Pro! 🎉</h3>
-            <p className="text-sm text-slate-400">Your account has been upgraded. Enjoy unlimited applications and AI features.</p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Error Banner */}
       {error && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -125,33 +130,9 @@ export function Billing() {
         </motion.div>
       )}
 
-      {/* Current Plan Banner */}
-      {subscriptionStatus && (
-        <div className="glass-card p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
-              subscriptionStatus.isPro ? "bg-brand-primary/20 text-brand-primary" : "bg-slate-400/10 text-slate-400"
-            )}>
-              {subscriptionStatus.plan === 'pro' ? 'Pro' : 'Free'} Plan
-            </div>
-            {!subscriptionStatus.isPro && (
-              <span className="text-xs text-slate-500">
-                {subscriptionStatus.applicationsThisMonth}/{subscriptionStatus.applicationLimit} applications used this month
-              </span>
-            )}
-            {subscriptionStatus.isTrialActive && subscriptionStatus.plan !== 'pro' && (
-              <span className="text-xs text-amber-400">
-                Trial active until {new Date(subscriptionStatus.trialEndsAt).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-display font-bold text-white tracking-tight">Upgrade your search.</h1>
-        <p className="text-slate-400 max-w-xl mx-auto">Choose the plan that fits your career goals. All plans include a 14-day free trial.</p>
+        <p className="text-slate-400 max-w-xl mx-auto">Choose the plan that fits your career goals.</p>
         
         <div className="flex items-center justify-center gap-4 pt-4">
           <span className={cn("text-sm transition-colors", interval === 'month' ? "text-white" : "text-slate-500")}>Monthly</span>
@@ -165,76 +146,85 @@ export function Billing() {
             />
           </button>
           <span className={cn("text-sm transition-colors", interval === 'year' ? "text-white" : "text-slate-500")}>
-            Yearly <span className="text-brand-primary font-bold ml-1">(-17%)</span>
+            Yearly <span className="text-brand-primary font-bold ml-1">(Save 15%)</span>
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+        {/* FREE TIER */}
         <div className="glass-card p-10 flex flex-col justify-between space-y-8 bg-bg-dark/50 border-border-dark">
           <div className="space-y-2">
             <h3 className="text-xl font-bold uppercase tracking-widest text-slate-500">Free Tier</h3>
             <div className="flex items-baseline gap-1">
-              <IndianRupee className="w-6 h-6 text-white" />
-              <p className="text-4xl font-bold text-white">0</p>
+              <p className="text-4xl font-bold text-white">$0</p>
+              <p className="text-lg font-medium text-slate-400">/mo</p>
             </div>
             <p className="text-xs text-slate-500">Free forever for basic needs</p>
           </div>
           <ul className="space-y-4 text-sm text-slate-400">
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> Manual job logging</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> Basic status tracking</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> 5 applications per month</li>
-            <li className="flex items-center gap-3 opacity-30"><CheckCircle className="w-4 h-4" /> Gmail Automation</li>
-            <li className="flex items-center gap-3 opacity-30"><CheckCircle className="w-4 h-4" /> AI Resume Analysis</li>
-            <li className="flex items-center gap-3 opacity-30"><CheckCircle className="w-4 h-4" /> AI Resume Generation</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> Up to 5 applications/month</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> Manual tracking only</li>
+            <li className="flex items-center gap-3 opacity-30"><CheckCircle className="w-4 h-4" /> Gmail auto-sync</li>
+            <li className="flex items-center gap-3 opacity-30"><CheckCircle className="w-4 h-4" /> AI Resume Builder</li>
+            <li className="flex items-center gap-3 opacity-30"><CheckCircle className="w-4 h-4" /> AI Cover Letter</li>
           </ul>
           <button 
-            disabled={profile?.subscription_tier === 'free' || !profile?.subscription_tier}
+            disabled={!isPro}
             className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
           >
-            {(!profile?.subscription_tier || profile?.subscription_tier === 'free') ? 'Current Plan' : 'Downgrade'}
+            {!isPro ? 'Current Plan' : 'Downgrade'}
           </button>
         </div>
 
+        {/* PRO TIER */}
         <div className="glass-card p-10 flex flex-col justify-between space-y-8 relative overflow-hidden bg-brand-primary/5 border-brand-primary/30 shadow-2xl shadow-brand-primary/10">
           <div className="absolute top-6 right-8 px-3 py-1 bg-brand-primary text-white text-[10px] font-bold rounded-full uppercase tracking-widest">Recommended</div>
           <div className="space-y-2">
             <h3 className="text-xl font-bold uppercase tracking-widest text-brand-primary">ApplyJi Pro</h3>
             <div className="flex items-baseline gap-1">
-              <IndianRupee className="w-6 h-6 text-white" />
               <p className="text-4xl font-bold text-white">
-                {interval === 'month' ? '499' : '4,999'}
+                {interval === 'month' ? MONTHLY_DISPLAY : YEARLY_DISPLAY}
               </p>
               <p className="text-lg font-medium text-slate-400">/{interval === 'month' ? 'mo' : 'yr'}</p>
             </div>
             {interval === 'year' && (
-              <p className="text-xs font-bold text-brand-primary tracking-tight">Save ₹989 — best value for long-term search</p>
+              <p className="text-xs font-bold text-brand-primary tracking-tight">Billed annually ($8.49/mo)</p>
             )}
           </div>
           <ul className="space-y-4 text-sm text-slate-300">
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Automated Gmail Sync</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Gemini AI Resume Analysis</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> AI Resume Generation</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> AI Follow-up Composer</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Unlimited Applications</li>
-            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Advanced Analytics</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Unlimited applications</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Gmail auto-sync</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> AI Resume Builder</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> AI Cover Letter</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Skills Gap Analysis</li>
+            <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Follow-up Generator</li>
           </ul>
-          <button 
-            onClick={handleStripePayment}
-            disabled={loading || profile?.subscription_tier === 'pro'}
-            className="w-full py-4 bg-brand-primary text-white rounded-2xl font-bold hover:bg-brand-secondary transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Processing...
-              </>
-            ) : profile?.subscription_tier === 'pro' ? (
-              'Current Plan'
-            ) : (
-              'Upgrade to Pro'
-            )}
-          </button>
+          
+          {isPro ? (
+            <button 
+              onClick={handleManageBilling}
+              disabled={loading}
+              className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Manage Billing'}
+            </button>
+          ) : (
+            <button 
+              onClick={handleStripePayment}
+              disabled={loading}
+              className="w-full py-4 bg-brand-primary text-white rounded-2xl font-bold hover:bg-brand-secondary transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Upgrade to Pro'
+              )}
+            </button>
+          )}
         </div>
       </div>
 

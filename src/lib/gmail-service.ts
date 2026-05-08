@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-export async function getGmailClient(refreshToken: string, onTokenUpdate?: (tokens: any) => void) {
+export async function getGmailClient(refreshToken: string, onTokenRefresh?: (tokens: any) => Promise<void>) {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -11,17 +11,16 @@ export async function getGmailClient(refreshToken: string, onTokenUpdate?: (toke
     refresh_token: refreshToken
   });
 
-  // Automatically listen for token refreshes and notify the caller
   oauth2Client.on('tokens', (tokens) => {
-    if (onTokenUpdate) {
-      onTokenUpdate(tokens);
+    if (onTokenRefresh) {
+      onTokenRefresh(tokens).catch(err => console.error('Error in onTokenRefresh:', err));
     }
   });
 
   return google.gmail({ version: 'v1', auth: oauth2Client });
 }
 
-export async function fetchEmails(gmail: any, query: string = 'newer_than:30d') {
+export async function fetchEmails(gmail: any, query: string) {
   const res = await gmail.users.messages.list({
     userId: 'me',
     q: query,
@@ -40,26 +39,64 @@ export async function getEmailContent(gmail: any, messageId: string) {
 
   const payload = res.data.payload;
   let body = '';
+  let from = '';
+  let subject = '';
 
-  if (payload.parts) {
-    // Basic part traversal for text/plain
-    const part = payload.parts.find((p: any) => p!.mimeType === 'text/plain') || payload.parts[0];
-    if (part.body.data) {
-      body = Buffer.from(part.body.data, 'base64').toString();
+  const headers = payload.headers || [];
+  const fromHeader = headers.find((h: any) => h.name.toLowerCase() === 'from');
+  const subjectHeader = headers.find((h: any) => h.name.toLowerCase() === 'subject');
+
+  if (fromHeader) from = fromHeader.value;
+  if (subjectHeader) subject = subjectHeader.value;
+
+  function extractBody(part: any): string {
+    if (part.body && part.body.data) {
+      return Buffer.from(part.body.data, 'base64').toString();
     }
-  } else if (payload.body.data) {
-    body = Buffer.from(payload.body.data, 'base64').toString();
+    if (part.parts) {
+      for (const p of part.parts) {
+        const result = extractBody(p);
+        if (result) return result;
+      }
+    }
+    return '';
   }
 
-  const subjectHeader = payload.headers?.find((h: any) => h.name.toLowerCase() === 'subject');
-  const subject = subjectHeader ? subjectHeader.value : '';
+  // Look for text/plain first
+  let textPart = null;
+  let htmlPart = null;
+
+  function findParts(part: any) {
+    if (part.mimeType === 'text/plain') textPart = part;
+    if (part.mimeType === 'text/html') htmlPart = part;
+    if (part.parts) part.parts.forEach(findParts);
+  }
+
+  findParts(payload);
+
+  if (textPart) {
+    body = extractBody(textPart);
+  } else if (htmlPart) {
+    body = extractBody(htmlPart);
+    // Strip HTML tags
+    body = body.replace(/<[^>]*>/g, ' ');
+    // Decode common entities
+    body = body.replace(/&nbsp;/g, ' ')
+               .replace(/&amp;/g, '&')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&quot;/g, '"');
+  } else {
+    body = extractBody(payload);
+  }
 
   return {
     id: messageId,
     threadId: res.data.threadId,
+    subject,
+    from,
+    date: new Date(parseInt(res.data.internalDate)).toISOString(),
     snippet: res.data.snippet,
-    subject: subject,
-    body: body,
-    date: new Date(parseInt(res.data.internalDate)).toISOString()
+    body: body.trim()
   };
 }

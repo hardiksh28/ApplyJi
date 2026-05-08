@@ -16,7 +16,8 @@ import {
   Target,
   Compass,
   Users,
-  MessageSquare
+  MessageSquare,
+  Lock
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,7 +29,7 @@ import { useEffect, useState } from 'react';
 
 const navItems = [
   { id: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: '/discovery', label: 'Job Discovery', icon: Compass },
+  { id: '/discovery', label: 'Job Discovery', icon: Compass, isPro: true },
   { id: '/applications', label: 'Applications', icon: Briefcase },
   { id: '/saved', label: 'Saved Jobs', icon: Bookmark },
   { id: '/interviews', label: 'Interviews', icon: Calendar },
@@ -36,15 +37,15 @@ const navItems = [
 ];
 
 const aiItems = [
-  { id: '/resume', label: 'Resume/CV', icon: FileText },
-  { id: '/cover-letter', label: 'Cover Letter', icon: PenTool },
-  { id: '/skills-gap', label: 'Skills Gap', icon: Target },
-  { id: '/insights', label: 'Insights', icon: BarChart3 },
+  { id: '/resume', label: 'Resume/CV', icon: FileText, isPro: true },
+  { id: '/cover-letter', label: 'Cover Letter', icon: PenTool, isPro: true },
+  { id: '/skills-gap', label: 'Skills Gap', icon: Target, isPro: true },
+  { id: '/insights', label: 'Insights', icon: BarChart3, isPro: true },
 ];
 
 const communityItems = [
-  { id: '/mentors', label: 'Mentors', icon: Users },
-  { id: '/reviews', label: 'Reviews', icon: MessageSquare },
+  { id: '/mentors', label: 'Mentors', icon: Users, isPro: true },
+  { id: '/reviews', label: 'Reviews', icon: MessageSquare, isPro: true },
 ];
 
 export function Sidebar() {
@@ -80,14 +81,17 @@ export function Sidebar() {
               to={item.id}
               className={({ isActive }) => cn(
                 isActive ? 'nav-item-active' : 'nav-item',
-                'w-full cursor-pointer'
+                'w-full cursor-pointer flex items-center justify-between'
               )}
             >
               {({ isActive }) => (
-                <>
+                <div className="flex items-center gap-3 flex-1">
                   <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
-                  <span>{item.label}</span>
-                </>
+                  <span className="flex-1">{item.label}</span>
+                  {item.isPro && profile?.subscription_tier !== 'pro' && (
+                    <Lock className="w-3.5 h-3.5 text-amber-500 opacity-70" />
+                  )}
+                </div>
               )}
             </NavLink>
           ))}
@@ -101,14 +105,17 @@ export function Sidebar() {
               to={item.id}
               className={({ isActive }) => cn(
                 isActive ? 'nav-item-active' : 'nav-item',
-                'w-full cursor-pointer'
+                'w-full cursor-pointer flex items-center justify-between'
               )}
             >
               {({ isActive }) => (
-                <>
+                <div className="flex items-center gap-3 flex-1">
                   <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
-                  <span>{item.label}</span>
-                </>
+                  <span className="flex-1">{item.label}</span>
+                  {item.isPro && profile?.subscription_tier !== 'pro' && (
+                    <Lock className="w-3.5 h-3.5 text-amber-500 opacity-70" />
+                  )}
+                </div>
               )}
             </NavLink>
           ))}
@@ -122,14 +129,17 @@ export function Sidebar() {
               to={item.id}
               className={({ isActive }) => cn(
                 isActive ? 'nav-item-active' : 'nav-item',
-                'w-full cursor-pointer'
+                'w-full cursor-pointer flex items-center justify-between'
               )}
             >
               {({ isActive }) => (
-                <>
+                <div className="flex items-center gap-3 flex-1">
                   <item.icon className={cn("w-5 h-5", isActive ? "text-brand-primary" : "text-zinc-500")} />
-                  <span>{item.label}</span>
-                </>
+                  <span className="flex-1">{item.label}</span>
+                  {item.isPro && profile?.subscription_tier !== 'pro' && (
+                    <Lock className="w-3.5 h-3.5 text-amber-500 opacity-70" />
+                  )}
+                </div>
               )}
             </NavLink>
           ))}
@@ -165,16 +175,18 @@ export function Sidebar() {
         </button>
       </div>
 
-      <div className="mt-8 p-4 glass-card bg-brand-primary/5 border-brand-primary/20">
-        <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">Pro Plan</p>
-        <p className="text-sm text-white font-medium mb-3">Get AI-powered resume matching</p>
-        <button 
-          onClick={() => navigate('/billing')}
-          className="w-full py-2 bg-brand-primary hover:bg-brand-secondary text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
-        >
-          Upgrade Now
-        </button>
-      </div>
+      {profile?.subscription_tier !== 'pro' && (
+        <div className="mt-8 p-4 glass-card bg-brand-primary/5 border-brand-primary/20">
+          <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">Pro Plan</p>
+          <p className="text-sm text-white font-medium mb-3">Get AI-powered resume matching</p>
+          <button 
+            onClick={() => navigate('/billing')}
+            className="w-full py-2 bg-brand-primary hover:bg-brand-secondary text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+          >
+            Upgrade Now
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -53,9 +53,10 @@ export function CompanyReviews() {
     try {
       const response = await fetch(`/api/companies/${encodeURIComponent(name)}/reviews`);
       const data = await response.json();
-      setReviews(data);
+      setReviews(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setReviews([]);
     } finally {
       setLoading(false);
     }

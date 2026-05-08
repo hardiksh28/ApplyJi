@@ -25,7 +25,7 @@ import { Search } from 'lucide-react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, ProRoute } from './components/ProtectedRoute';
 import { Landing } from './components/Landing';
 import { supabase } from './lib/supabase/client';
 
@@ -224,15 +224,17 @@ export default function App() {
         <Route path="/saved" element={<ProtectedRoute><AppLayout><SavedJobs /></AppLayout></ProtectedRoute>} />
         <Route path="/interviews" element={<ProtectedRoute><AppLayout><Interviews /></AppLayout></ProtectedRoute>} />
         <Route path="/tasks" element={<ProtectedRoute><AppLayout><Tasks /></AppLayout></ProtectedRoute>} />
-        <Route path="/resume" element={<ProtectedRoute><AppLayout><Resume /></AppLayout></ProtectedRoute>} />
-        <Route path="/cover-letter" element={<ProtectedRoute><AppLayout><CoverLetter /></AppLayout></ProtectedRoute>} />
-        <Route path="/skills-gap" element={<ProtectedRoute><AppLayout><SkillsGap /></AppLayout></ProtectedRoute>} />
-        <Route path="/insights" element={<ProtectedRoute><AppLayout><Insights /></AppLayout></ProtectedRoute>} />
-        <Route path="/discovery" element={<ProtectedRoute><AppLayout><JobDiscovery /></AppLayout></ProtectedRoute>} />
-        <Route path="/mentors" element={<ProtectedRoute><AppLayout><Mentors /></AppLayout></ProtectedRoute>} />
-        <Route path="/reviews" element={<ProtectedRoute><AppLayout><CompanyReviews /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><AppLayout><Billing /></AppLayout></ProtectedRoute>} />
+
+        {/* Pro Routes */}
+        <Route path="/resume" element={<ProRoute><AppLayout><Resume /></AppLayout></ProRoute>} />
+        <Route path="/cover-letter" element={<ProRoute><AppLayout><CoverLetter /></AppLayout></ProRoute>} />
+        <Route path="/skills-gap" element={<ProRoute><AppLayout><SkillsGap /></AppLayout></ProRoute>} />
+        <Route path="/insights" element={<ProRoute><AppLayout><Insights /></AppLayout></ProRoute>} />
+        <Route path="/discovery" element={<ProRoute><AppLayout><JobDiscovery /></AppLayout></ProRoute>} />
+        <Route path="/mentors" element={<ProRoute><AppLayout><Mentors /></AppLayout></ProRoute>} />
+        <Route path="/reviews" element={<ProRoute><AppLayout><CompanyReviews /></AppLayout></ProRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
