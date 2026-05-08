@@ -301,9 +301,9 @@ export async function generateTailoredResume(
     const profileContext = `
 Candidate Profile:
 - Name: ${profile.fullName}
-- Skills: ${JSON.stringify(profile.skills)}
-- Experience: ${JSON.stringify(profile.experience)}
-- Education: ${JSON.stringify(profile.education)}
+- Skills: ${JSON.stringify(profile!.skills)}
+- Experience: ${JSON.stringify(profile!.experience)}
+- Education: ${JSON.stringify(profile!.education)}
 `;
 
     const response = await ai.models.generateContent({
@@ -407,8 +407,8 @@ export async function generateCoverLetter(
 
 Candidate:
 - Name: ${profile.fullName}
-- Key Skills: ${JSON.stringify(profile.skills)}
-- Experience Summary: ${JSON.stringify(profile.experience)}
+- Key Skills: ${JSON.stringify(profile!.skills)}
+- Experience Summary: ${JSON.stringify(profile!.experience)}
 
 Job Description:
 """

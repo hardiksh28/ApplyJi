@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -184,7 +184,7 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white mb-1">
-            Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}!
+            Welcome back{profile?.full_name ? `, ${profile!.full_name.split(' ')[0]}` : ''}!
           </h1>
           <p className="text-slate-400">
             {applications.length} applications tracked so far.
@@ -312,25 +312,25 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
           </div>
           <div className="space-y-4">
             {applications.length > 0 ? applications.slice(0, 4).map((app) => (
-              <div key={app.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group cursor-pointer border border-transparent hover:border-border-dark">
+              <div key={app!.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group cursor-pointer border border-transparent hover:border-border-dark">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-surface-dark flex items-center justify-center text-white font-bold border border-border-dark group-hover:border-brand-primary/50 transition-colors uppercase">
-                    {app.company_name ? app.company_name[0] : '?'}
+                    {app!.company_name ? app!.company_name[0] : '?'}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white">{app.job_title}</h4>
-                    <p className="text-xs text-slate-500">{app.company_name} {app.location ? `• ${app.location}` : ''}</p>
+                    <h4 className="text-sm font-semibold text-white">{app!.job_title}</h4>
+                    <p className="text-xs text-slate-500">{app!.company_name} {app!.location ? `• ${app!.location}` : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={cn(
                     "text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full",
-                    app.status?.toLowerCase() === 'interviewing' ? "text-amber-400 bg-amber-400/10" : 
-                    app.status?.toLowerCase() === 'offer' ? "text-emerald-400 bg-emerald-400/10" :
-                    app.status?.toLowerCase() === 'screening' ? "text-blue-400 bg-blue-400/10" :
+                    app!.status?.toLowerCase() === 'interviewing' ? "text-amber-400 bg-amber-400/10" : 
+                    app!.status?.toLowerCase() === 'offer' ? "text-emerald-400 bg-emerald-400/10" :
+                    app!.status?.toLowerCase() === 'screening' ? "text-blue-400 bg-blue-400/10" :
                     "text-slate-400 bg-slate-400/10"
                   )}>
-                    {app.status || 'Applied'}
+                    {app!.status || 'Applied'}
                   </span>
                   <button className="p-1 text-slate-500 hover:text-white transition-colors cursor-pointer">
                     <MoreVertical className="w-4 h-4" />

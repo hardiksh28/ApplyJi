@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, Building2, MapPin, Calendar, ExternalLink, Activity } from 'lucide-react';
@@ -56,27 +55,27 @@ export function ApplicationDetails() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <header className="space-y-4">
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{app.job_title}</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{app!.job_title}</h1>
             <div className="flex flex-wrap items-center gap-6 text-gray-600">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-indigo-600" />
-                <span className="font-semibold">{app.company_name}</span>
+                <span className="font-semibold">{app!.company_name}</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
-                <span>{app.location || 'Remote'}</span>
+                <span>{app!.location || 'Remote'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5" />
-                <span>Applied {format(new Date(app.applied_at), 'PPP')}</span>
+                <span>Applied {format(new Date(app!.applied_at), 'PPP')}</span>
               </div>
             </div>
             <Badge variant="secondary" className="px-4 py-1 text-sm bg-indigo-50 text-indigo-700">
-              {app.status.toUpperCase()}
+              {app!.status.toUpperCase()}
             </Badge>
           </header>
 
-          <FollowUpComposer company={app.company_name} jobTitle={app.job_title} />
+          <FollowUpComposer company={app!.company_name} jobTitle={app!.job_title} />
 
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -108,9 +107,9 @@ export function ApplicationDetails() {
               <button className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
                 Log New Activity
               </button>
-              {app.job_url && (
+              {app!.job_url && (
                 <a 
-                  href={app.job_url} 
+                  href={app!.job_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="w-full py-3 px-4 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"

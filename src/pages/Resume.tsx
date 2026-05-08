@@ -1,24 +1,18 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  FileText, 
   Upload, 
   Trash2, 
-  Eye, 
   Download, 
   Sparkles, 
   AlertCircle,
   CheckCircle2,
   BrainCircuit,
-  Zap,
   Loader2,
-  Lock,
-  Copy,
   Target,
-  XCircle,
-  ChevronRight
+  XCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase/client';
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/CommonUI';
 
@@ -43,6 +37,9 @@ export function Resume() {
   const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'ats'>('preview');
   const [atsResult, setAtsResult] = useState<any>(null);
   const [isAtsChecking, setIsAtsChecking] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [generatedResume, setGeneratedResume] = useState<any>(null);
 
   const handleATSCheck = async () => {
     if (!jobDescription) {

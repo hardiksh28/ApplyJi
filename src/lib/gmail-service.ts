@@ -43,7 +43,7 @@ export async function getEmailContent(gmail: any, messageId: string) {
 
   if (payload.parts) {
     // Basic part traversal for text/plain
-    const part = payload.parts.find((p: any) => p.mimeType === 'text/plain') || payload.parts[0];
+    const part = payload.parts.find((p: any) => p!.mimeType === 'text/plain') || payload.parts[0];
     if (part.body.data) {
       body = Buffer.from(part.body.data, 'base64').toString();
     }

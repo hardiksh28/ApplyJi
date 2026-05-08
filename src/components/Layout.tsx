@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   LayoutDashboard, 
   Briefcase, 
@@ -6,7 +5,6 @@ import {
   Calendar, 
   CheckSquare, 
   FileText, 
-  BarChart3, 
   BarChart3, 
   Settings,
   Plus,
@@ -141,7 +139,7 @@ export function Sidebar() {
       <div className="pt-4 mt-4 border-t border-zinc-800 space-y-1">
         <div className="flex items-center gap-3 px-2 py-3 mb-2">
           <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold ring-1 ring-zinc-700 text-brand-primary">
-            {profile?.full_name ? profile.full_name.substring(0, 2).toUpperCase() : 'HS'}
+            {profile?.full_name ? profile!.full_name.substring(0, 2).toUpperCase() : 'HS'}
           </div>
           <div className="flex-1 min-w-0 leading-tight">
             <p className="text-sm font-semibold truncate text-white">{profile?.full_name || 'Hardik S.'}</p>

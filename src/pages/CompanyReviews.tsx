@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Building2, 
   Search, 
@@ -142,7 +142,7 @@ export function CompanyReviews() {
                  {[
                    { name: 'Cred', score: 4.8 },
                    { name: 'BrowserStack', score: 4.6 },
-                   { name: 'Razorpay', score: 4.5 }
+                   { name: 'Stripe', score: 4.5 }
                  ].map((c, i) => (
                    <div key={i} className="flex items-center justify-between text-xs">
                       <span className="text-slate-300 font-medium">{c.name}</span>

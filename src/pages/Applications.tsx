@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Table as TableIcon, 
   LayoutPanelLeft, 
@@ -147,8 +147,8 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
   };
 
   const filteredApps = applications.filter(app => 
-    (app.company_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (app.job_title?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    (app!.company_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (app!.job_title?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   if (error && !loading) {
@@ -243,45 +243,45 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                   <tbody className="divide-y divide-border-dark/50">
                     {filteredApps.map((app) => (
                       <tr 
-                        key={app.id} 
+                        key={app!.id} 
                         onClick={() => {
                           setSelectedApp(app);
-                          setNoteDraft(app.notes || '');
+                          setNoteDraft(app!.notes || '');
                           setEditingStatus(false);
                           setEditingNotes(false);
                         }}
                         className={cn(
                           "hover:bg-white/5 transition-colors cursor-pointer group",
-                          selectedApp?.id === app.id ? "bg-brand-primary/10" : ""
+                          selectedApp?.id === app!.id ? "bg-brand-primary/10" : ""
                         )}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-bg-dark flex items-center justify-center font-bold text-white border border-border-dark group-hover:border-brand-primary/50 transition-colors uppercase">
-                              {app.company_name ? app.company_name[0] : '?'}
+                              {app!.company_name ? app!.company_name[0] : '?'}
                             </div>
-                            <span className="font-semibold text-white">{app.company_name}</span>
+                            <span className="font-semibold text-white">{app!.company_name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 font-medium text-slate-300">{app.job_title}</td>
+                        <td className="px-6 py-4 font-medium text-slate-300">{app!.job_title}</td>
                         <td className="px-6 py-4 text-slate-400 text-sm">
-                          {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : 'Not yet'}
+                          {app!.applied_at ? new Date(app!.applied_at).toLocaleDateString() : 'Not yet'}
                         </td>
                         <td className="px-6 py-4">
                           <span className={cn(
                             "text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full",
-                            getStatusStyles(app.status || 'Applied')
+                            getStatusStyles(app!.status || 'Applied')
                           )}>
-                            {app.status || 'Applied'}
+                            {app!.status || 'Applied'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-slate-400 text-sm">{app.location || 'Remote'}</td>
+                        <td className="px-6 py-4 text-slate-400 text-sm">{app!.location || 'Remote'}</td>
                         <td className="px-6 py-4 text-right">
                           <button 
-                            onClick={(e) => { e.stopPropagation(); archiveApplication(app.id); }}
+                            onClick={(e) => { e.stopPropagation(); archiveApplication(app!.id); }}
                             className="p-2 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                           >
-                            {actionLoading === app.id ? (
+                            {actionLoading === app!.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Trash2 className="w-4 h-4" />
@@ -326,7 +326,7 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                   onStatusChange={updateStatus}
                   onCardClick={(app) => {
                     setSelectedApp(app);
-                    setNoteDraft(app.notes || '');
+                    setNoteDraft(app!.notes || '');
                   }}
                />
             </motion.div>
@@ -354,11 +354,11 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                 <div className="p-6 border-b border-border-dark flex items-center justify-between bg-bg-dark/50">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-bg-dark flex items-center justify-center font-bold text-2xl text-white border border-border-dark uppercase">
-                      {selectedApp.company_name ? selectedApp.company_name[0] : '?'}
+                      {selectedApp!.company_name ? selectedApp!.company_name[0] : '?'}
                     </div>
                     <div>
-                      <h2 className="text-xl font-display font-bold text-white">{selectedApp.company_name}</h2>
-                      <p className="text-sm text-slate-400">{selectedApp.job_title}</p>
+                      <h2 className="text-xl font-display font-bold text-white">{selectedApp!.company_name}</h2>
+                      <p className="text-sm text-slate-400">{selectedApp!.job_title}</p>
                     </div>
                   </div>
                   <button 
@@ -380,16 +380,16 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                             {statuses.map(s => (
                               <button
                                 key={s}
-                                onClick={() => updateStatus(selectedApp.id, s.toLowerCase())}
-                                disabled={actionLoading === selectedApp.id}
+                                onClick={() => updateStatus(selectedApp!.id, s.toLowerCase())}
+                                disabled={actionLoading === selectedApp!.id}
                                 className={cn(
                                   "block w-full text-left text-xs font-bold px-2 py-1 rounded transition-all cursor-pointer",
-                                  selectedApp.status?.toLowerCase() === s.toLowerCase()
+                                  selectedApp!.status?.toLowerCase() === s.toLowerCase()
                                     ? "bg-brand-primary/20 text-brand-primary"
                                     : "hover:bg-white/5 text-slate-400"
                                 )}
                               >
-                                {actionLoading === selectedApp.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : s}
+                                {actionLoading === selectedApp!.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : s}
                               </button>
                             ))}
                             <button onClick={() => setEditingStatus(false)} className="text-[10px] text-slate-500 hover:text-white mt-1">Cancel</button>
@@ -399,8 +399,8 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                             onClick={() => setEditingStatus(true)}
                             className="flex items-center gap-2 group cursor-pointer"
                           >
-                            <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full", getStatusStyles(selectedApp.status))}>
-                              {selectedApp.status || 'Applied'}
+                            <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full", getStatusStyles(selectedApp!.status))}>
+                              {selectedApp!.status || 'Applied'}
                             </span>
                             <Edit3 className="w-3 h-3 text-slate-600 group-hover:text-brand-primary transition-colors" />
                           </button>
@@ -408,7 +408,7 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                       </div>
                       <div className="glass-card p-4">
                         <span className="text-[10px] text-slate-500 block mb-1">Salary</span>
-                        <span className="text-xs font-bold text-emerald-400">{selectedApp.salary_range || selectedApp.salary || 'N/A'}</span>
+                        <span className="text-xs font-bold text-emerald-400">{selectedApp!.salary_range || selectedApp!.salary || 'N/A'}</span>
                       </div>
                     </div>
                   </section>
@@ -419,19 +419,19 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                       {editingNotes ? (
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => saveNotes(selectedApp.id)} 
-                            disabled={actionLoading === 'notes-' + selectedApp.id}
+                            onClick={() => saveNotes(selectedApp!.id)} 
+                            disabled={actionLoading === 'notes-' + selectedApp!.id}
                             className="text-[10px] text-brand-primary hover:underline cursor-pointer font-bold flex items-center gap-1"
                           >
-                            {actionLoading === 'notes-' + selectedApp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            {actionLoading === 'notes-' + selectedApp!.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                             Save
                           </button>
-                          <button onClick={() => { setEditingNotes(false); setNoteDraft(selectedApp.notes || ''); }} className="text-[10px] text-slate-500 hover:text-white cursor-pointer font-bold flex items-center gap-1">
+                          <button onClick={() => { setEditingNotes(false); setNoteDraft(selectedApp!.notes || ''); }} className="text-[10px] text-slate-500 hover:text-white cursor-pointer font-bold flex items-center gap-1">
                             <X className="w-3 h-3" /> Cancel
                           </button>
                         </div>
                       ) : (
-                        <button onClick={() => { setEditingNotes(true); setNoteDraft(selectedApp.notes || ''); }} className="text-[10px] text-brand-primary hover:underline cursor-pointer font-bold">Edit</button>
+                        <button onClick={() => { setEditingNotes(true); setNoteDraft(selectedApp!.notes || ''); }} className="text-[10px] text-brand-primary hover:underline cursor-pointer font-bold">Edit</button>
                       )}
                     </div>
                     {editingNotes ? (
@@ -443,7 +443,7 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                       />
                     ) : (
                       <div className="glass-card p-4 bg-bg-dark/50 text-slate-300 text-sm leading-relaxed min-h-[100px] whitespace-pre-wrap italic">
-                        {selectedApp.notes || "No notes for this application yet... Click Edit to add notes."}
+                        {selectedApp!.notes || "No notes for this application yet... Click Edit to add notes."}
                       </div>
                     )}
                   </section>
@@ -457,8 +457,8 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                         <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-brand-primary bg-bg-dark"></div>
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold text-white">{selectedApp.status || 'Applied'}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">{selectedApp.applied_at ? new Date(selectedApp.applied_at).toLocaleDateString() : 'N/A'}</span>
+                            <span className="text-xs font-bold text-white">{selectedApp!.status || 'Applied'}</span>
+                            <span className="text-[10px] text-slate-500 font-mono">{selectedApp!.applied_at ? new Date(selectedApp!.applied_at).toLocaleDateString() : 'N/A'}</span>
                           </div>
                           <p className="text-xs text-slate-400">Current status</p>
                         </div>
@@ -476,7 +476,7 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       <button 
-                        onClick={() => window.location.href = `/resume?jd=${encodeURIComponent(selectedApp.company_name + ' ' + selectedApp.job_title)}`}
+                        onClick={() => window.location.href = `/resume?jd=${encodeURIComponent(selectedApp!.company_name + ' ' + selectedApp!.job_title)}`}
                         className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-dark border border-border-dark hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all group"
                       >
                         <div className="flex items-center gap-3">
@@ -492,7 +492,7 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                       </button>
 
                       <button 
-                        onClick={() => window.location.href = `/cover-letter?jd=${encodeURIComponent(selectedApp.company_name + ' ' + selectedApp.job_title)}`}
+                        onClick={() => window.location.href = `/cover-letter?jd=${encodeURIComponent(selectedApp!.company_name + ' ' + selectedApp!.job_title)}`}
                         className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-dark border border-border-dark hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all group"
                       >
                         <div className="flex items-center gap-3">
@@ -508,7 +508,7 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                       </button>
 
                       <button 
-                        onClick={() => window.location.href = `/skills-gap?jd=${encodeURIComponent(selectedApp.company_name + ' ' + selectedApp.job_title)}`}
+                        onClick={() => window.location.href = `/skills-gap?jd=${encodeURIComponent(selectedApp!.company_name + ' ' + selectedApp!.job_title)}`}
                         className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-dark border border-border-dark hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all group"
                       >
                         <div className="flex items-center gap-3">
@@ -523,12 +523,12 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                         <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-all" />
                       </button>
 
-                      {['interviewing', 'interview'].includes((selectedApp.status || '').toLowerCase()) && (
+                      {['interviewing', 'interview'].includes((selectedApp!.status || '').toLowerCase()) && (
                         <button 
                           onClick={async () => {
                             const { data: { session } } = await supabase.auth.getSession();
                             if (!session) return;
-                            setActionLoading('prep-' + selectedApp.id);
+                            setActionLoading('prep-' + selectedApp!.id);
                             try {
                               const response = await fetch('/api/interview-prep/generate', {
                                 method: 'POST',
@@ -537,13 +537,13 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                                   'Authorization': `Bearer ${session.access_token}`,
                                 },
                                 body: JSON.stringify({ 
-                                  jobId: selectedApp.id,
-                                  companyName: selectedApp.company_name,
-                                  role: selectedApp.job_title
+                                  jobId: selectedApp!.id,
+                                  companyName: selectedApp!.company_name,
+                                  role: selectedApp!.job_title
                                 }),
                               });
                               const data = await response.json();
-                              setApplications(apps => apps.map(a => a.id === selectedApp.id ? { ...a, interview_prep_data: data } : a));
+                              setApplications(apps => apps.map(a => a.id === selectedApp!.id ? { ...a, interview_prep_data: data } : a));
                               setSelectedApp({ ...selectedApp, interview_prep_data: data });
                             } catch (err) {
                               alert('Failed to generate prep: ' + (err as Error).message);
@@ -551,12 +551,12 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                               setActionLoading(null);
                             }
                           }}
-                          disabled={actionLoading === 'prep-' + selectedApp.id}
+                          disabled={actionLoading === 'prep-' + selectedApp!.id}
                           className="w-full flex items-center justify-between p-3 rounded-xl bg-amber-400/5 border border-amber-400/20 hover:bg-amber-400/10 transition-all group"
                         >
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-amber-400/10 rounded-lg">
-                              {actionLoading === 'prep-' + selectedApp.id ? <Loader2 className="w-4 h-4 animate-spin text-amber-400" /> : <BrainCircuit className="w-4 h-4 text-amber-400" />}
+                              {actionLoading === 'prep-' + selectedApp!.id ? <Loader2 className="w-4 h-4 animate-spin text-amber-400" /> : <BrainCircuit className="w-4 h-4 text-amber-400" />}
                             </div>
                             <div className="text-left">
                               <p className="text-xs font-bold text-white">Interview Prep</p>
@@ -568,14 +568,14 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                       )}
                     </div>
 
-                    {selectedApp.interview_prep_data?.questions && (
+                    {selectedApp!.interview_prep_data?.questions && (
                       <div className="mt-4 p-4 rounded-xl bg-surface-dark border border-border-dark space-y-4">
                         <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2">
                           <Sparkles className="w-3 h-3" />
                           AI Prep Sheet
                         </h4>
                         <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
-                          {selectedApp.interview_prep_data.questions.map((q: any, i: number) => (
+                          {selectedApp!.interview_prep_data.questions.map((q: any, i: number) => (
                             <div key={i} className="space-y-1">
                               <p className="text-xs font-bold text-white">Q: {q.q}</p>
                               <p className="text-[11px] text-slate-400 italic">A: {q.a}</p>
@@ -596,11 +596,11 @@ export function Applications({ onAddClick }: { onAddClick: () => void }) {
                     Change Status
                   </button>
                   <button 
-                    onClick={() => archiveApplication(selectedApp.id)}
-                    disabled={actionLoading === selectedApp.id}
+                    onClick={() => archiveApplication(selectedApp!.id)}
+                    disabled={actionLoading === selectedApp!.id}
                     className="px-4 py-2.5 bg-surface-dark border border-border-dark text-slate-400 hover:text-rose-400 hover:border-rose-400/50 rounded-xl transition-all cursor-pointer flex items-center gap-2"
                   >
-                    {actionLoading === selectedApp.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    {actionLoading === selectedApp!.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     Delete
                   </button>
                 </div>

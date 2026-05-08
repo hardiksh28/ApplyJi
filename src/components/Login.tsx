@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'motion/react';
 import { LogIn } from 'lucide-react';
 import { signInWithGoogle } from '../lib/auth-service';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'motion/react';
 import { AlertCircle, Inbox, Loader2 } from 'lucide-react';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   Filter,
@@ -97,7 +97,12 @@ export function JobDiscovery() {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
       const data = await response.json();
-      setRecommended(data || []);
+      if (Array.isArray(data)) {
+        setRecommended(data);
+      } else {
+        setRecommended([]);
+        if (data.error) setError(data.error);
+      }
     } catch (err) {
       console.error(err);
     } finally {

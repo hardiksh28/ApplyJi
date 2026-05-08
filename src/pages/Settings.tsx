@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   User, 
   Mail, 
@@ -24,6 +24,7 @@ import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase/client';
 import { signOut } from '../lib/auth-service';
 import { LoadingSpinner } from '../components/CommonUI';
+import { motion } from 'motion/react';
 
 export function Settings() {
   const [profile, setProfile] = useState<any>(null);
@@ -296,7 +297,7 @@ export function Settings() {
                   <User className="text-white w-8 h-8" />
                </div>
                <div>
-                  <h3 className="text-xl font-display font-bold text-white">{profile.full_name || 'Anonymous User'}</h3>
+                  <h3 className="text-xl font-display font-bold text-white">{profile!.full_name || 'Anonymous User'}</h3>
                   <p className="text-sm text-slate-400">{profile.email}</p>
                </div>
             </div>
@@ -320,7 +321,7 @@ export function Settings() {
                      {isEditingProfile ? (
                        <input value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})} className="bg-transparent border-none outline-none w-full text-white" />
                      ) : (
-                       <span>{profile.full_name || 'Not set'}</span>
+                       <span>{profile!.full_name || 'Not set'}</span>
                      )}
                   </div>
                </div>

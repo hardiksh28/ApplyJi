@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+ts_errors.txt
+tsc_errors.txt
+scratch/
+fix_backend.js

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, Copy, Check, Wand2 } from 'lucide-react';
 import { generateFollowUp } from '../lib/ai/gemini';

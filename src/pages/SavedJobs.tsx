@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Bookmark, MapPin, DollarSign, Clock, ArrowRight, ExternalLink, Loader2, Sparkles, PenTool, Target } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { useEffect, useState } from 'react';
+import { Bookmark, MapPin, DollarSign, ArrowRight, ExternalLink, Loader2, Sparkles, PenTool, Target } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase/client';
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/CommonUI';

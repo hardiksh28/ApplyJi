@@ -1,16 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   CheckCircle2, 
   Circle, 
-  Clock, 
-  Tag as TagIcon,
   Plus,
-  Filter,
   MoreVertical,
   Calendar,
-  AlertCircle,
-  Flag,
-  RotateCcw
+  Flag
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';

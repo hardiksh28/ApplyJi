@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -112,7 +112,7 @@ function KanbanColumn({ id, title, applications, onCardClick }: KanbanColumnProp
       >
         <SortableContext id={id} items={applications.map(a => a.id)} strategy={verticalListSortingStrategy}>
           {applications.map((app) => (
-            <KanbanCard key={app.id} id={app.id} application={app} onClick={onCardClick} />
+            <KanbanCard key={app!.id} id={app!.id} application={app} onClick={onCardClick} />
           ))}
         </SortableContext>
       </div>

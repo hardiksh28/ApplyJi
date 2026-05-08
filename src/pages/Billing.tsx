@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { CheckCircle, Zap, Shield, ArrowLeft, Loader2, AlertCircle, IndianRupee } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,11 +6,7 @@ import { supabase } from '../lib/supabase/client';
 import { cn } from '../lib/utils';
 import { LoadingSpinner, ErrorState } from '../components/CommonUI';
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
+
 
 export function Billing() {
   const navigate = useNavigate();
@@ -24,17 +20,7 @@ export function Billing() {
 
   useEffect(() => {
     fetchData();
-    loadRazorpayScript();
   }, []);
-
-  const loadRazorpayScript = () => {
-    if (document.getElementById('razorpay-script')) return;
-    const script = document.createElement('script');
-    script.id = 'razorpay-script';
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.head.appendChild(script);
-  };
 
   const fetchData = async () => {
     try {
@@ -60,7 +46,7 @@ export function Billing() {
     }
   };
 
-  const handleRazorpayPayment = async () => {
+  const handleStripePayment = async () => {
     setLoading(true);
     setError(null);
 
@@ -68,84 +54,22 @@ export function Billing() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      // 1. Create order on backend
-      const orderRes = await fetch('/api/razorpay/create-order', {
+      const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ plan: 'pro', interval }),
+        body: JSON.stringify({ interval, currency: 'inr' }),
       });
 
-      if (!orderRes.ok) {
-        const errData = await orderRes.json();
-        throw new Error(errData.error || 'Failed to create order');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to create checkout session');
       }
 
-      const { orderId, amount, currency, keyId } = await orderRes.json();
-
-      // 2. Open Razorpay checkout
-      const options = {
-        key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount,
-        currency,
-        name: 'ApplyJi',
-        description: `Pro Plan (${interval === 'year' ? 'Yearly' : 'Monthly'})`,
-        order_id: orderId,
-        handler: async function (response: any) {
-          // 3. Verify payment on backend
-          try {
-            const verifyRes = await fetch('/api/razorpay/verify-payment', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-
-            if (!verifyRes.ok) throw new Error('Payment verification failed');
-
-            const result = await verifyRes.json();
-            if (result.success) {
-              setPaymentSuccess(true);
-              setProfile({ ...profile, subscription_tier: 'pro' });
-              // Refresh subscription status
-              fetchData();
-            }
-          } catch (err: any) {
-            setError('Payment was processed but verification failed. Please contact support.');
-          }
-        },
-        prefill: {
-          email: profile?.email,
-          name: profile?.full_name,
-        },
-        theme: {
-          color: '#8B5CF6',
-        },
-        modal: {
-          ondismiss: function () {
-            setLoading(false);
-          },
-        },
-      };
-
-      if (!window.Razorpay) {
-        throw new Error('Payment system is loading. Please try again in a moment.');
-      }
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.on('payment.failed', function (response: any) {
-        setError(`Payment failed: ${response.error.description}. Please try again.`);
-        setLoading(false);
-      });
-      razorpay.open();
+      const { url } = await response.json();
+      window.location.href = url;
     } catch (err: any) {
       console.error('Payment error:', err);
       setError(err.message || 'Failed to initialize payment');
@@ -296,7 +220,7 @@ export function Billing() {
             <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-brand-primary" /> Advanced Analytics</li>
           </ul>
           <button 
-            onClick={handleRazorpayPayment}
+            onClick={handleStripePayment}
             disabled={loading || profile?.subscription_tier === 'pro'}
             className="w-full py-4 bg-brand-primary text-white rounded-2xl font-bold hover:bg-brand-secondary transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
           >
@@ -317,7 +241,7 @@ export function Billing() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-border-dark">
         {[
           { icon: Zap, title: "Instant Setup", desc: "No configuration needed. Connect Gmail and go." },
-          { icon: Shield, title: "Secure Payments", desc: "Processed securely via Razorpay." },
+          { icon: Shield, title: "Secure Payments", desc: "Processed securely via Stripe." },
           { icon: CheckCircle, title: "Cancel Anytime", desc: "No long-term contracts or hidden fees." }
         ].map((feature, i) => (
           <div key={i} className="flex gap-4">

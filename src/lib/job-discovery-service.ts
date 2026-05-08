@@ -50,16 +50,16 @@ export class JobDiscoveryService {
    */
   async getRecommendedJobs(userId: string, limit = 20) {
     // 1. Fetch user profile and preferences
-    const { data: profile, error: profileError } = await this.supabase
+    const { data: profile } = await this.supabase
       .from('profiles')
       .select('skills, preferred_role, preferred_location, target_salary_min')
       .eq('id', userId)
       .single();
 
-    if (profileError || !profile) throw new Error('Profile not found');
+    // Fallback to empty preferences if profile not found
+    const userProfile = profile || { skills: [], preferred_role: '', preferred_location: '' };
 
-    // 2. Fetch jobs (Simplified: In a real app, this would be a complex SQL query or vector search)
-    // For now, we'll fetch active jobs and score them in TS
+    // 2. Fetch jobs
     const { data: jobs, error: jobsError } = await this.supabase
       .from('jobs')
       .select('*')
@@ -69,7 +69,7 @@ export class JobDiscoveryService {
 
     if (jobsError || !jobs) throw new Error('Jobs not found');
 
-    const userSkills = (profile.skills || []).map((s: any) => 
+    const userSkills = (userProfile.skills || []).map((s: any) => 
       typeof s === 'string' ? s.toLowerCase() : (s.name || s.skill || '').toLowerCase()
     );
 
@@ -83,12 +83,12 @@ export class JobDiscoveryService {
       score += (matchingSkills.length / (jobSkills.length || 1)) * 60;
 
       // Role matching (20% weight)
-      if (profile.preferred_role && job.title.toLowerCase().includes(profile.preferred_role.toLowerCase())) {
+      if (userProfile.preferred_role && job.title.toLowerCase().includes(userProfile.preferred_role.toLowerCase())) {
         score += 20;
       }
 
       // Location matching (10% weight)
-      if (profile.preferred_location && job.location?.toLowerCase().includes(profile.preferred_location.toLowerCase())) {
+      if (userProfile.preferred_location && job.location?.toLowerCase().includes(userProfile.preferred_location.toLowerCase())) {
         score += 10;
       }
 
