@@ -24,8 +24,8 @@ const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
 
 async function startServer() {
-  if (process.env.NODE_ENV === 'production' && !process.env.APP_URL) {
-    throw new Error('APP_URL is required in production environment');
+  if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_APP_URL) {
+    throw new Error('NEXT_PUBLIC_APP_URL is required in production environment');
   }
 
   const app = express();
@@ -37,7 +37,7 @@ async function startServer() {
     contentSecurityPolicy: false, // Required for Vite/AI Studio preview
   }));
   app!.use(cors({
-    origin: process.env.APP_URL || 'http://localhost:3000',
+    origin: process.env.NEXT_PUBLIC_APP_URL || '',
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -78,7 +78,7 @@ async function startServer() {
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
       );
 
       // Encode the user's JWT in the state so we know who to associate after redirect
@@ -111,7 +111,7 @@ async function startServer() {
     try {
       const { code, state } = req.query;
       if (!code || !state) {
-        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=missing_params`);
+        return res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=missing_params`);
       }
 
       // Decode user info from state
@@ -119,13 +119,13 @@ async function startServer() {
       try {
         stateData = JSON.parse(Buffer.from(state as string, 'base64url').toString());
       } catch {
-        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=invalid_state`);
+        return res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=invalid_state`);
       }
 
       // Verify the user's token is still valid
       const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(stateData.token);
       if (authError || !user || user.id !== stateData.userId) {
-        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=auth_failed`);
+        return res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=auth_failed`);
       }
 
       // Exchange authorization code for tokens
@@ -133,14 +133,14 @@ async function startServer() {
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
       );
 
       const { tokens } = await oauth2Client.getToken(code as string);
 
       if (!tokens.refresh_token) {
         console.warn('No refresh_token received from Google. User may need to revoke access and reconnect.');
-        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=no_refresh_token`);
+        return res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=no_refresh_token`);
       }
 
       // Save refresh_token to the user's profile
@@ -154,14 +154,14 @@ async function startServer() {
 
       if (updateError) {
         console.error('Failed to save Google refresh token:', updateError);
-        return res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=save_failed`);
+        return res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=save_failed`);
       }
 
       console.log(`✅ Gmail connected for user ${user.id}`);
-      res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/dashboard?gmail=connected`);
+      res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?gmail=connected`);
     } catch (err: any) {
       console.error('Google callback error:', err);
-      res.redirect(`${process.env.APP_URL || 'http://localhost:3000'}/settings?gmail=error&reason=unknown`);
+      res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=unknown`);
     }
   });
 
@@ -486,7 +486,7 @@ async function startServer() {
   }
 
   app!.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 ApplyJi Server running at http://localhost:${PORT}`);
+    console.log(`🚀 ApplyJi Server running at ${process.env.NEXT_PUBLIC_APP_URL}`);
   });
 }
 

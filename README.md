@@ -50,7 +50,7 @@ Follow these steps to get the project running locally:
 5.  **Set up Google Cloud for Gmail OAuth**:
     - Create a project in Google Cloud Console.
     - Enable Gmail API.
-    - Create OAuth 2.0 Client IDs and set the redirect URI to your local or hosted callback endpoint (e.g., `http://localhost:3000/api/auth/google/callback`).
+    - Create OAuth 2.0 Client IDs and set the redirect URI to your local or hosted callback endpoint (e.g., `<NEXT_PUBLIC_APP_URL>/api/auth/google/callback`).
 
 6.  **Run the app**:
     ```bash
@@ -64,7 +64,7 @@ Here is an explanation of the variables required in your `.env` file:
 | Variable | Description |
 | :--- | :--- |
 | `GEMINI_API_KEY` | Your Google Gemini API key for AI features. |
-| `APP_URL` | The base URL of the application (e.g., `http://localhost:3000`). |
+| `NEXT_PUBLIC_APP_URL` | The base URL of the application (e.g., `http://localhost:3000`). |
 | `VITE_SUPABASE_URL` | Your Supabase project URL. |
 | `VITE_SUPABASE_ANON_KEY`| Your Supabase anonymous key (public). |
 | `SUPABASE_SERVICE_ROLE_KEY`| Your Supabase service role key (secret, for server use only). |

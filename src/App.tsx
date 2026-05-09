@@ -22,12 +22,24 @@ import { CompanyReviews } from './pages/CompanyReviews';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search } from 'lucide-react';
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
 import { ProtectedRoute, ProRoute } from './components/ProtectedRoute';
 import { Landing } from './components/Landing';
 import { supabase } from './lib/supabase/client';
+
+const AnalyticsTracker = () => {
+  const location = useLocation();
+  useEffect(() => {
+    const gaId = process.env.NEXT_PUBLIC_GA_ID;
+    if (gaId) {
+      ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+    }
+  }, [location]);
+  return null;
+};
 
 export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -46,6 +58,13 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const gaId = process.env.NEXT_PUBLIC_GA_ID;
+    if (gaId) {
+      ReactGA.initialize(gaId);
+    }
   }, []);
 
   const AppLayout = ({ children, onAddClick: addClickProp }: { children: React.ReactNode; onAddClick?: () => void }) => (
@@ -214,6 +233,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <AnalyticsTracker />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
