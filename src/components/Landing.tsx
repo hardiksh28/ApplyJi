@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
   Mail, 
@@ -22,6 +22,7 @@ export function Landing() {
   const [billingInterval, setBillingInterval] = React.useState<'month' | 'year'>('month');
   const [user, setUser] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [activeLegalDoc, setActiveLegalDoc] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     // Initial fetch
@@ -102,7 +103,6 @@ export function Landing() {
             <div className="hidden md:flex items-center gap-6 text-[13px] font-medium text-gray-400">
               <a href="#product" className="hover:text-white transition-colors cursor-pointer">Product</a>
               <a href="#ai-tools" className="hover:text-white transition-colors cursor-pointer">AI Tools</a>
-              <a href="#pricing" className="hover:text-white transition-colors cursor-pointer">Pricing</a>
               <a href="#enterprise" className="hover:text-white transition-colors cursor-pointer">Enterprise</a>
             </div>
           </div>
@@ -261,80 +261,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-32 px-8 border-t border-white/5" id="pricing">
-        <div className="max-w-5xl mx-auto space-y-16">
-          <div className="text-center space-y-8">
-            <h2 className="text-4xl font-bold tracking-tight mb-4">Simple, honest pricing.</h2>
-            <p className="text-gray-500">Free forever for basic tracking. Power up when you're serious.</p>
-            
-            <div className="flex items-center justify-center gap-4">
-              <span className={`text-sm ${billingInterval === 'month' ? 'text-white' : 'text-gray-500'}`}>Monthly</span>
-              <button 
-                onClick={() => setBillingInterval(prev => prev === 'month' ? 'year' : 'month')}
-                className="w-14 h-7 bg-white/10 rounded-full p-1 relative flex items-center transition-colors hover:bg-white/20"
-              >
-                <motion.div 
-                  animate={{ x: billingInterval === 'month' ? 0 : 28 }}
-                  className="w-5 h-5 bg-white rounded-full shadow-lg"
-                />
-              </button>
-              <span className={`text-sm ${billingInterval === 'year' ? 'text-white' : 'text-gray-500'}`}>
-                Yearly <span className="text-indigo-400 font-bold ml-1">(-15%)</span>
-              </span>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 space-y-8">
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold uppercase tracking-widest text-gray-400">Basic</h3>
-                <p className="text-4xl font-bold">Free</p>
-              </div>
-              <ul className="space-y-4 text-sm text-gray-400 font-medium">
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> Manual job logging</li>
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> Basic status tracking</li>
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-500" /> 5 application slots</li>
-              </ul>
-              <button 
-                onClick={() => handleStart('basic')}
-                className="w-full py-4 bg-white/10 rounded-2xl font-bold hover:bg-white/20 transition-all"
-              >
-                Get Started
-              </button>
-            </div>
-
-            <div className="p-10 rounded-[2.5rem] bg-white text-black space-y-8 relative shadow-2xl shadow-indigo-600/20">
-              <div className="absolute top-6 right-8 px-3 py-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">Popular</div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold uppercase tracking-widest text-gray-500 font-black">ApplyJi Pro</h3>
-                <div className="flex items-baseline gap-1">
-                  <p className="text-4xl font-bold">
-                    ${billingInterval === 'month' ? '9' : '7.65'}
-                  </p>
-                  <p className="text-lg font-medium text-gray-400">/mo</p>
-                </div>
-                {billingInterval === 'year' && (
-                  <p className="text-xs font-bold text-indigo-600 tracking-tight">Billed annually at $91.80/year</p>
-                )}
-              </div>
-              <ul className="space-y-4 text-sm font-medium">
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-indigo-600" /> Automated Gmail Sync</li>
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-indigo-600" /> Gemini AI Follow-up Composer</li>
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-indigo-600" /> Advanced Analytics</li>
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-indigo-600" /> Unlimited Applications</li>
-                <li className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-indigo-600" /> Priority Support</li>
-              </ul>
-              <button 
-                onClick={() => handleStart('pro')}
-                className="w-full py-4 bg-black text-white rounded-2xl font-bold hover:opacity-90 transition-all"
-              >
-                Go Pro Now
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Enterprise Section */}
       <section className="py-32 px-8 border-t border-white/5 bg-[#000]" id="enterprise">
@@ -368,7 +295,7 @@ export function Landing() {
               </div>
 
               <a 
-                href="mailto:sales@applyji.com?subject=Enterprise Inquiry"
+                href="mailto:applyjiii@gmail.com?subject=Enterprise Inquiry"
                 className="inline-block px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-full font-bold border border-white/10 transition-all text-center"
               >
                 Contact Sales
@@ -417,8 +344,8 @@ export function Landing() {
           </div>
           
           <div className="flex flex-wrap justify-center gap-x-12 gap-y-6 text-sm font-medium text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
+            <button onClick={() => setActiveLegalDoc('/privacy-policy.html')} className="hover:text-white transition-colors">Privacy Policy</button>
+            <button onClick={() => setActiveLegalDoc('/terms-of-service.html')} className="hover:text-white transition-colors">Terms & Conditions</button>
             <a href="#" className="hover:text-white transition-colors">Twitter</a>
             <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
           </div>
@@ -427,6 +354,47 @@ export function Landing() {
           &copy; 2026 ApplyJi Operations Inc. All Rights Reserved.
         </div>
       </footer>
+
+      {/* Legal Modal */}
+      <AnimatePresence>
+        {activeLegalDoc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setActiveLegalDoc(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-4xl h-[80vh] bg-[#0a0a0a] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#0a0a0a]">
+                <h3 className="text-xl font-bold text-white">
+                  {activeLegalDoc === '/privacy-policy.html' ? 'Privacy Policy' : 'Terms of Service'}
+                </h3>
+                <button 
+                  onClick={() => setActiveLegalDoc(null)}
+                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto bg-white">
+                <iframe 
+                  src={activeLegalDoc} 
+                  className="w-full h-full border-none"
+                  title="Legal Document"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
