@@ -346,8 +346,7 @@ export function Landing() {
           <div className="flex flex-wrap justify-center gap-x-12 gap-y-6 text-sm font-medium text-gray-400">
             <button onClick={() => setActiveLegalDoc('/privacy-policy.html')} className="hover:text-white transition-colors">Privacy Policy</button>
             <button onClick={() => setActiveLegalDoc('/terms-of-service.html')} className="hover:text-white transition-colors">Terms & Conditions</button>
-            <a href="#" className="hover:text-white transition-colors">Twitter</a>
-            <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
+
           </div>
         </div>
         <div className="mt-12 text-center text-[11px] text-gray-600 tracking-widest font-bold uppercase">
