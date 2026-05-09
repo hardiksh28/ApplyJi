@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Terms of Service – ApplyJi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #f9f7f4;
+      --ink: #1a1a2e;
+      --accent: #c85c3a;
+      --muted: #6b6b80;
+      --border: #e2ddd8;
+      --card: #ffffff;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.75;
+      font-size: 16px;
+    }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(249,247,244,0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem; font-weight: 700;
+      color: var(--ink); text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+    nav a.back {
+      font-size: 0.85rem; font-weight: 500; color: var(--muted);
+      text-decoration: none; border: 1px solid var(--border);
+      padding: 6px 16px; border-radius: 100px;
+      transition: all 0.2s;
+    }
+    nav a.back:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .hero {
+      padding: 72px 40px 48px;
+      max-width: 780px; margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero .badge {
+      display: inline-block;
+      background: #fff3f0; color: var(--accent);
+      font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 4px 14px; border-radius: 100px;
+      border: 1px solid #f5c9bc; margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700; line-height: 1.15;
+      letter-spacing: -1px; margin-bottom: 16px;
+    }
+    .hero p { color: var(--muted); font-size: 0.95rem; }
+    .hero .updated { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+    .toc-card {
+      max-width: 780px; margin: 40px auto 0;
+      padding: 0 40px;
+    }
+    .toc-card .inner {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px 32px;
+    }
+    .toc-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem; margin-bottom: 16px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .toc-card ol { padding-left: 20px; }
+    .toc-card li { margin-bottom: 6px; }
+    .toc-card a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+    .toc-card a:hover { text-decoration: underline; }
+    .content {
+      max-width: 780px; margin: 0 auto;
+      padding: 56px 40px 100px;
+    }
+    section { margin-bottom: 56px; }
+    section h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.55rem; font-weight: 700;
+      margin-bottom: 16px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent);
+      display: inline-block;
+    }
+    section p { color: #3a3a50; margin-bottom: 14px; }
+    section ul, section ol {
+      padding-left: 22px; margin-bottom: 14px;
+    }
+    section li { margin-bottom: 6px; color: #3a3a50; }
+    section strong { color: var(--ink); }
+    section a { color: var(--accent); }
+    .highlight {
+      background: #fff3f0;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px; margin: 20px 0;
+    }
+    .highlight p { margin: 0; color: #6b3020; font-size: 0.92rem; }
+    footer {
+      text-align: center; padding: 32px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem; color: var(--muted);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    @media (max-width: 600px) {
+      nav { padding: 14px 20px; }
+      .hero, .toc-card, .content { padding-left: 20px; padding-right: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/">Apply<span>Ji</span></a>
+  <a class="back" href="/">← Back to App</a>
+</nav>
+
+<div class="hero">
+  <div class="badge">Legal</div>
+  <h1>Terms of Service</h1>
+  <p>The rules and expectations for using ApplyJi.</p>
+  <p class="updated">Last updated: May 9, 2026 &nbsp;·&nbsp; Effective: May 9, 2026</p>
+</div>
+
+<div class="toc-card">
+  <div class="inner">
+    <h3>Table of Contents</h3>
+    <ol>
+      <li><a href="#t1">Acceptance of Terms</a></li>
+      <li><a href="#t2">Description of Service</a></li>
+      <li><a href="#t3">Account Registration</a></li>
+      <li><a href="#t4">Acceptable Use</a></li>
+      <li><a href="#t5">Your Content</a></li>
+      <li><a href="#t6">Intellectual Property</a></li>
+      <li><a href="#t7">Disclaimers</a></li>
+      <li><a href="#t8">Limitation of Liability</a></li>
+      <li><a href="#t9">Termination</a></li>
+      <li><a href="#t10">Governing Law</a></li>
+      <li><a href="#t11">Changes to Terms</a></li>
+      <li><a href="#t12">Contact</a></li>
+    </ol>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="highlight">
+    <p><strong>Plain English:</strong> Use ApplyJi to track job applications. Don't misuse the platform, don't share your account, and respect others. We may update these terms — we'll let you know when we do.</p>
+  </div>
+
+  <section id="t1">
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using ApplyJi ("the Service") at <a href="https://applyji.com">applyji.com</a> or any related application, you agree to be bound by these Terms of Service ("Terms"). If you do not agree, please do not use the Service.</p>
+    <p>These Terms constitute a legally binding agreement between you and ApplyJi ("we," "us," or "our"). If you are using the Service on behalf of an organization, you represent that you have authority to bind that organization to these Terms.</p>
+  </section>
+
+  <section id="t2">
+    <h2>2. Description of Service</h2>
+    <p>ApplyJi is a job application tracker that helps individuals organize, monitor, and manage their job search activities. Features may include:</p>
+    <ul>
+      <li>Logging job applications with status tracking</li>
+      <li>Uploading and organizing documents (resumes, cover letters)</li>
+      <li>Setting reminders and follow-up tasks</li>
+      <li>Visualizing application pipeline and progress</li>
+      <li>Integrations with third-party job boards or platforms</li>
+    </ul>
+    <p>We reserve the right to modify, suspend, or discontinue any part of the Service at any time, with or without notice.</p>
+  </section>
+
+  <section id="t3">
+    <h2>3. Account Registration</h2>
+    <p>To use ApplyJi, you must:</p>
+    <ul>
+      <li>Be at least 13 years of age</li>
+      <li>Provide accurate and complete registration information</li>
+      <li>Keep your account credentials confidential</li>
+      <li>Notify us immediately of any unauthorized access to your account</li>
+    </ul>
+    <p>You are responsible for all activity that occurs under your account. ApplyJi is not liable for any loss resulting from unauthorized use of your account.</p>
+    <p>One person may not maintain more than one free account. Accounts are non-transferable.</p>
+  </section>
+
+  <section id="t4">
+    <h2>4. Acceptable Use</h2>
+    <p>You agree to use ApplyJi only for lawful purposes. You must not:</p>
+    <ul>
+      <li>Use the Service for any illegal or unauthorized purpose</li>
+      <li>Attempt to gain unauthorized access to any part of the Service or its infrastructure</li>
+      <li>Reverse engineer, decompile, or disassemble any part of the Service</li>
+      <li>Transmit viruses, malware, or any other harmful code</li>
+      <li>Scrape, crawl, or use automated tools against the Service without written permission</li>
+      <li>Harass, abuse, or harm other users</li>
+      <li>Upload content that is defamatory, obscene, or infringes on third-party rights</li>
+      <li>Misrepresent your identity or affiliation</li>
+    </ul>
+    <p>Violation of these rules may result in immediate account termination.</p>
+  </section>
+
+  <section id="t5">
+    <h2>5. Your Content</h2>
+    <p><strong>Ownership:</strong> You retain full ownership of all content you upload or create within ApplyJi (your job applications, documents, notes, etc.).</p>
+    <p><strong>License to Us:</strong> By uploading content, you grant ApplyJi a limited, non-exclusive, royalty-free license to store and process that content solely to provide and improve the Service. We do not claim ownership of your content.</p>
+    <p><strong>Responsibility:</strong> You are solely responsible for the content you upload. You represent that you have the necessary rights to upload and share it.</p>
+    <p><strong>Deletion:</strong> When you delete content or close your account, we remove it from our systems within 30 days, except where retention is required by law or legitimate business reasons (e.g., backups).</p>
+  </section>
+
+  <section id="t6">
+    <h2>6. Intellectual Property</h2>
+    <p>All aspects of ApplyJi — including but not limited to its design, code, logo, name, and branding — are the exclusive property of ApplyJi and protected by intellectual property laws.</p>
+    <p>Nothing in these Terms grants you a right to use our trademarks, trade names, or branding without explicit written permission.</p>
+  </section>
+
+  <section id="t7">
+    <h2>7. Disclaimers</h2>
+    <p>ApplyJi is provided <strong>"as is"</strong> and <strong>"as available"</strong> without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.</p>
+    <p>We do not guarantee that:</p>
+    <ul>
+      <li>The Service will be uninterrupted, secure, or error-free</li>
+      <li>Using ApplyJi will result in job offers or improved job search outcomes</li>
+      <li>Any information provided on the platform is accurate or complete</li>
+    </ul>
+  </section>
+
+  <section id="t8">
+    <h2>8. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by law, ApplyJi and its founders, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from:</p>
+    <ul>
+      <li>Your use of or inability to use the Service</li>
+      <li>Unauthorized access to or alteration of your data</li>
+      <li>Loss of data or profits</li>
+      <li>Any other matter relating to the Service</li>
+    </ul>
+    <p>Our total liability to you for any claims shall not exceed the amount you paid us in the twelve months preceding the claim, or INR 1,000, whichever is greater.</p>
+  </section>
+
+  <section id="t9">
+    <h2>9. Termination</h2>
+    <p><strong>By You:</strong> You may stop using ApplyJi and close your account at any time via account settings or by contacting us.</p>
+    <p><strong>By Us:</strong> We may suspend or terminate your account at any time if we believe you have violated these Terms, with or without prior notice.</p>
+    <p>Upon termination, your right to use the Service ceases immediately. Sections covering intellectual property, disclaimers, limitation of liability, and governing law survive termination.</p>
+  </section>
+
+  <section id="t10">
+    <h2>10. Governing Law</h2>
+    <p>These Terms are governed by and construed in accordance with the laws of India, without regard to conflict of law provisions. Any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the courts located in India.</p>
+  </section>
+
+  <section id="t11">
+    <h2>11. Changes to Terms</h2>
+    <p>We may update these Terms from time to time. When we make material changes, we'll notify you by email or via a prominent notice in the app, at least 7 days before the changes take effect.</p>
+    <p>Continued use of the Service after changes become effective constitutes your acceptance of the new Terms. If you do not agree, you must stop using the Service and close your account.</p>
+  </section>
+
+  <section id="t12">
+    <h2>12. Contact</h2>
+    <p>Questions about these Terms? Please reach out:</p>
+    <ul>
+      <li><strong>Email:</strong> <a href="mailto:legal@applyji.com">legal@applyji.com</a></li>
+      <li><strong>Website:</strong> <a href="https://applyji.com">applyji.com</a></li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>
+  <p>&copy; 2026 ApplyJi &nbsp;·&nbsp; <a href="/privacy-policy">Privacy Policy</a> &nbsp;·&nbsp; <a href="/terms-of-service">Terms of Service</a></p>
+</footer>
+
+</body>
+</html>
