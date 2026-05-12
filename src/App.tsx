@@ -19,6 +19,7 @@ import { Settings } from './pages/Settings';
 import { Billing } from './pages/Billing';
 import { Mentors } from './pages/Mentors';
 import { CompanyReviews } from './pages/CompanyReviews';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search } from 'lucide-react';
 
@@ -238,6 +239,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/" element={<Landing />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         
         <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard onAddClick={() => setIsAddModalOpen(true)} /></AppLayout></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute><AppLayout><Applications onAddClick={() => setIsAddModalOpen(true)} /></AppLayout></ProtectedRoute>} />

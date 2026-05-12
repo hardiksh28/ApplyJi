@@ -64,7 +64,7 @@ Here is an explanation of the variables required in your `.env` file:
 | Variable | Description |
 | :--- | :--- |
 | `GEMINI_API_KEY` | Your Google Gemini API key for AI features. |
-| `NEXT_PUBLIC_APP_URL` | The base URL of the application (e.g., `http://localhost:3000`). |
+| `NEXT_PUBLIC_APP_URL` | The base URL of the application (e.g., `https://your-app.vercel.app`). |
 | `VITE_SUPABASE_URL` | Your Supabase project URL. |
 | `VITE_SUPABASE_ANON_KEY`| Your Supabase anonymous key (public). |
 | `SUPABASE_SERVICE_ROLE_KEY`| Your Supabase service role key (secret, for server use only). |

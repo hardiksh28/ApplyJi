@@ -13,7 +13,7 @@ import {
   Lock,
   Cpu
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { signInWithGoogle } from '../lib/auth-service';
 import { supabase } from '../lib/supabase/client';
 
@@ -56,7 +56,7 @@ export function Landing() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          scopes: 'openid email profile',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -344,8 +344,8 @@ export function Landing() {
           </div>
           
           <div className="flex flex-wrap justify-center gap-x-12 gap-y-6 text-sm font-medium text-gray-400">
-            <button onClick={() => setActiveLegalDoc('/privacy-policy.html')} className="hover:text-white transition-colors">Privacy Policy</button>
-            <button onClick={() => setActiveLegalDoc('/terms-of-service.html')} className="hover:text-white transition-colors">Terms & Conditions</button>
+            <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <a href="/terms-of-service.html" className="hover:text-white transition-colors">Terms & Conditions</a>
 
           </div>
         </div>
