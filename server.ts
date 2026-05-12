@@ -29,7 +29,7 @@ async function startServer() {
   }
 
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
   const supabaseAdmin = getSupabaseAdmin();
 
   // Basic Middleware
@@ -218,7 +218,7 @@ async function startServer() {
       const { getGmailClient, fetchEmails, getEmailContent } = await import('./src/lib/gmail-service.ts');
       const { parseJobEmail } = await import('./src/lib/ai/gemini.ts');
 
-      const gmail = await getGmailClient(profile.google_refresh_token, async (tokens) => {
+      const gmail = await getGmailClient(profile!.google_refresh_token, async (tokens) => {
         if (tokens.refresh_token) {
           console.log('Refreshing Google token for user:', req.user!.id);
           await supabaseAdmin
@@ -255,7 +255,7 @@ async function startServer() {
             console.log('Gemini rate limit hit, using fallback parser based on Subject line!');
             // Fallback: extract basic info from Subject since AI is unavailable
             const companyMatch = email.subject.match(/(?:from|at)\s+([A-Z][\w\s]+)/i);
-            const companyName = companyMatch ? companyMatch[1].trim() : 'Unknown Company';
+            const companyName = companyMatch?.[1]?.trim() ?? 'Unknown Company';
             
             parsed = {
               isJobApplication: true, // We assume true since the Gmail query matched it
