@@ -24,9 +24,7 @@ const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
 
 async function startServer() {
-  if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_APP_URL) {
-    throw new Error('NEXT_PUBLIC_APP_URL is required in production environment');
-  }
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://apply-ji.vercel.app';
 
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
@@ -37,7 +35,12 @@ async function startServer() {
     contentSecurityPolicy: false, // Required for Vite/AI Studio preview
   }));
   app!.use(cors({
-    origin: process.env.NEXT_PUBLIC_APP_URL || '',
+    origin: [
+      'https://apply-ji.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      APP_URL,
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -78,7 +81,7 @@ async function startServer() {
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
+        `${process.env.RENDER_URL}/api/auth/google/callback`
       );
 
       // Encode the user's JWT in the state so we know who to associate after redirect
@@ -124,7 +127,7 @@ async function startServer() {
       // Verify the user's token is still valid
       const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(stateData.token);
       if (authError || !user || user.id !== stateData.userId) {
-        return res.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?gmail=error&reason=auth_failed`);
+        return res.redirect(`${process.env.RENDER_URL}/api/auth/google/callback`);
       }
 
       // Exchange authorization code for tokens
@@ -203,7 +206,7 @@ async function startServer() {
     // GMAIL_SYNC_DISABLED - Remove this block after Google verification
     return res.status(503).json({ error: 'Gmail sync coming soon' });
     // END GMAIL_SYNC_DISABLED
-    
+
     try {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
@@ -227,7 +230,7 @@ async function startServer() {
             .eq('id', req.user!.id);
         }
       });
-      
+
       // Filter for application keywords
       const query = 'newer_than:30d ("thank you for applying" OR "application received" OR "application for" OR "position at" OR "successfully applied" OR "आपका आवेदन" OR "internshala" OR "naukri" OR "unstop" OR "wellfound")';
       const messages = await fetchEmails(gmail, query);
@@ -245,7 +248,7 @@ async function startServer() {
         if (existing) continue;
 
         const email = await getEmailContent(gmail, msg.id);
-        
+
         let parsed;
         try {
           parsed = await parseJobEmail(email.body || email.snippet);
@@ -256,7 +259,7 @@ async function startServer() {
             // Fallback: extract basic info from Subject since AI is unavailable
             const companyMatch = email.subject.match(/(?:from|at)\s+([A-Z][\w\s]+)/i);
             const companyName = companyMatch?.[1]?.trim() ?? 'Unknown Company';
-            
+
             parsed = {
               isJobApplication: true, // We assume true since the Gmail query matched it
               company: companyName,
@@ -265,7 +268,7 @@ async function startServer() {
               platform: 'Email Fallback'
             };
           } else {
-            throw e; 
+            throw e;
           }
         }
 
@@ -303,15 +306,15 @@ async function startServer() {
         emails_processed: messages.length,
       });
 
-      res.json({ 
-        message: 'Sync completed', 
+      res.json({
+        message: 'Sync completed',
         applicationsFound: results.length,
-        processedCount: messages.length 
+        processedCount: messages.length
       });
 
     } catch (err: any) {
       console.error('Sync error:', err);
-      
+
       await supabaseAdmin.from('email_sync_logs').insert({
         user_id: req.user!.id,
         sync_status: 'failed',
@@ -333,7 +336,7 @@ async function startServer() {
     try {
       const { data: profile } = await supabaseAdmin.from('profiles').select('referral_code').eq('id', req.params.userId).single();
       const { data: referrals } = await supabaseAdmin.from('referrals').select('*').eq('referrer_id', req.params.userId);
-      
+
       const totalReferrals = referrals?.length || 0;
       const earnedRewards = referrals?.filter(r => r.status === 'rewarded').length || 0;
       const pendingRewards = referrals?.filter(r => r.status === 'pending').length || 0;
@@ -361,7 +364,7 @@ async function startServer() {
         .select('*, profiles(full_name, avatar_url)')
         .ilike('company_name', req.params.name)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       res.json(data);
     } catch (err: any) {
@@ -372,7 +375,7 @@ async function startServer() {
   app!.post('/api/companies/reviews', authenticate, async (req: AuthRequest, res) => {
     try {
       const { companyName, rating, title, body, interviewExperience, offerReceived } = req.body;
-      
+
       if (hasProfanity(body) || hasProfanity(title)) {
         return res.status(400).json({ error: 'Review contains inappropriate language.' });
       }
@@ -431,7 +434,7 @@ async function startServer() {
     try {
       const { specialty, maxPrice } = req.query;
       let query = supabaseAdmin.from('mentor_profiles').select('*, profiles(full_name, avatar_url)').eq('is_active', true);
-      
+
       if (specialty) query = query.contains('specialties', [specialty]);
       if (maxPrice) query = query.lte('price_per_hour', maxPrice);
 
