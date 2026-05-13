@@ -203,10 +203,6 @@ async function startServer() {
 
   // Gmail Sync Route (Protected + Pro Required)
   app!.post('/api/sync/gmail', authenticate, syncRateLimiter, loadProfile, requirePro, async (req: AuthRequest, res) => {
-    // GMAIL_SYNC_DISABLED - Remove this block after Google verification
-    return res.status(503).json({ error: 'Gmail sync coming soon' });
-    // END GMAIL_SYNC_DISABLED
-
     try {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')

@@ -13,36 +13,50 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
 
   React.useEffect(() => {
-    async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setAuthenticated(false);
-        setLoading(false);
-        return;
-      }
+    let mounted = true;
 
-      setAuthenticated(true);
-
-      // Fetch profile for trial/subscription check
+    async function fetchProfile(userId: string) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single();
       
-      setProfile(profile);
-      setLoading(false);
+      if (mounted) {
+        setProfile(profile);
+        setLoading(false);
+      }
     }
 
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthenticated(!!session);
-      if (!session) setProfile(null);
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (session) {
+        setAuthenticated(true);
+        fetchProfile(session.user.id);
+      } else {
+        setAuthenticated(false);
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Listen for auth changes (this handles PKCE correctly and updates if session appears later)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (session) {
+        setAuthenticated(true);
+        fetchProfile(session.user.id);
+      } else {
+        setAuthenticated(false);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {

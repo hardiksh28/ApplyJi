@@ -154,8 +154,6 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
     // Silent background sync — no loading UI
     const prevAppIds = new Set(applications.map(a => a.id));
     
-    // GMAIL_SYNC_DISABLED - Uncomment after Google verification
-    /*
     syncGmail().then(async (result) => {
       if (result.success && result.data && result.data.applicationsFound > 0) {
         // Refresh data and highlight new items
@@ -167,7 +165,6 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
       }
       // If 0 found or error, do nothing silently
     });
-    */
   }, [profile]);
 
   const handleSync = async () => {
@@ -265,7 +262,6 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* GMAIL_SYNC_DISABLED
           <button
             onClick={handleSync}
             disabled={syncing}
@@ -283,7 +279,6 @@ export function Dashboard({ onAddClick }: { onAddClick: () => void }) {
               <span className="ml-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Gmail not connected" />
             )}
           </button>
-          */}
           <button 
             onClick={onAddClick}
             className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-primary/20 cursor-pointer whitespace-nowrap"

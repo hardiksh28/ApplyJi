@@ -14,7 +14,7 @@ import {
   Cpu
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithGoogle } from '../lib/auth-service';
+import { signInWithGoogle, syncRefreshToken } from '../lib/auth-service';
 import { supabase } from '../lib/supabase/client';
 
 export function Landing() {
@@ -26,18 +26,30 @@ export function Landing() {
 
   React.useEffect(() => {
     // Initial fetch
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user);
       setLoading(false);
+      if (user) {
+        try { await syncRefreshToken(); } catch (e) { console.error(e); }
+        const redirectPath = localStorage.getItem('redirect_after_auth') || '/dashboard';
+        localStorage.removeItem('redirect_after_auth');
+        navigate(redirectPath, { replace: true });
+      }
     });
 
     // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        try { await syncRefreshToken(); } catch (e) { console.error(e); }
+        const redirectPath = localStorage.getItem('redirect_after_auth') || '/dashboard';
+        localStorage.removeItem('redirect_after_auth');
+        navigate(redirectPath, { replace: true });
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const handleStart = async (targetPlan?: 'pro' | 'basic') => {
     if (user) {

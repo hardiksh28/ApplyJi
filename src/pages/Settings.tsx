@@ -565,7 +565,6 @@ export function Settings() {
 
            {/* Gmail Integration — Primary CTA */}
            <div className="p-5 rounded-xl border border-border-dark bg-bg-dark/30 hover:border-slate-700 transition-all">
-              {/* GMAIL_SYNC_DISABLED - Uncomment after Google verification
               <div className="flex items-center justify-between">
                  <div className="flex items-center gap-4">
                     <div className={cn(
@@ -618,13 +617,6 @@ export function Settings() {
                   Requires Pro plan • Read-only access to your emails • We only look for job application confirmations
                 </p>
               )}
-              */}
-              
-              {/* Replace GmailConnectCard with this temporary component */}
-              <div className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-400">
-                📬 Gmail Auto-Sync — <strong className="text-white">Coming Soon</strong>
-                <p className="mt-1 text-xs">We're getting verified by Google. Until then, use manual entry to track your applications.</p>
-              </div>
            </div>
 
            {/* Other Integrations */}
